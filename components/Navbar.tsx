@@ -225,7 +225,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               dbStatus === 'CONNECTED' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse' : 
               dbStatus === 'CONNECTING' ? 'bg-amber-500 animate-pulse' : 'bg-rose-500 shadow-[0_0_8px_#ef4444]'
             }`}></div>
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black text-white text-[7px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[200]">
+            <div className="
+  absolute 
+  right-0 
+  top-full 
+  mt-2 
+  w-56 
+  bg-white 
+  rounded-2xl 
+  shadow-xl
+  max-md:fixed
+  max-md:inset-x-4
+  max-md:top-20
+  max-md:w-auto
+">
+
               {dbStatus === 'CONNECTED' ? 'Cloud Sync ON' : 'Cloud Sync OFF'}
             </div>
           </div>
