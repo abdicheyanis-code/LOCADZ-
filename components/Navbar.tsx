@@ -293,19 +293,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {isMenuOpen && currentUser && (
-              <div
-                className={`
-                  absolute mt-4 z-[120] p-3
-                  bg-white rounded-[2.5rem]
-                  shadow-[0_25px_80px_rgba(0,0,0,0.2)]
-                  border border-white overflow-hidden
-                  animate-in zoom-in-95 duration-300 origin-top
-                  left-1/2 -translate-x-1/2
-                        w-[90vw] max-w-xs
-                  md:w-72 md:max-w-none md:translate-x-0
-                  ${isRTL ? 'md:left-0' : 'md:right-0'}
-                `}
-              >
+  <div
+    className={`
+      z-[9999] p-3 bg-white
+      shadow-[0_25px_80px_rgba(0,0,0,0.25)]
+      border border-white overflow-y-auto
+      animate-in zoom-in-95 duration-300
+
+      /* 📱 MOBILE (iPhone safe) */
+      fixed inset-x-3 top-[calc(env(safe-area-inset-top)+72px)]
+      max-h-[calc(100vh-100px)]
+      rounded-[2rem]
+
+      /* 🖥️ DESKTOP */
+      md:absolute md:top-full md:mt-4
+      md:right-0 md:left-auto
+      md:inset-x-auto
+      md:w-72 md:max-h-none
+      md:rounded-[2.5rem]
+    `}
+  >
+
                 <div 
                   className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
                   style={{ backgroundColor: accentColor }}
