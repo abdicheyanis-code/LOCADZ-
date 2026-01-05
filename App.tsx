@@ -153,7 +153,8 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+     <div className="fixed inset-0 -z-10">
+
         <div className="absolute inset-0 bg-[#050505]" />
         
         <div className="absolute inset-0 transition-opacity duration-[3000ms] ease-in-out">
