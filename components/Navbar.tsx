@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, UserProfile, AppLanguage } from '../types';
 
@@ -279,34 +278,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                    style={{ boxShadow: `0 0 20px ${accentColor}44` }} />
             </button>
 
-     {isMenuOpen && currentUser && (
-  <div
-    className={`
-      absolute mt-4 z-[120] p-3
-      bg-white rounded-[2.5rem]
-      shadow-[0_25px_80px_rgba(0,0,0,0.2)]
-      border border-white overflow-hidden
-      animate-in zoom-in-95 duration-300 origin-top
-
-      /* Mobile : centré sous l'avatar, largeur limitée à l'écran */
-      left-1/2 -translate-x-1/2
-      w-[calc(100vw-2.5rem)] max-w-sm
-
-      /* À partir de md : aligné au bouton comme avant */
-      md:w-72 md:max-w-none md:translate-x-0
-      ${isRTL ? 'md:left-0' : 'md:right-0'}
-    `}
-  >
-    {/* contenu inchangé */}
-    <div 
-      className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
-      style={{ backgroundColor: accentColor }}
-    >
-      <p className="font-black text-xl italic truncate">{currentUser.full_name} ✨</p>
-    </div>
-    {/* ... le reste du menu ... */}
-  </div>
-)}
+            {isMenuOpen && currentUser && (
+              <div
+                className={`
+                  absolute mt-4 z-[120] p-3
+                  bg-white rounded-[2.5rem]
+                  shadow-[0_25px_80px_rgba(0,0,0,0.2)]
+                  border border-white overflow-hidden
+                  animate-in zoom-in-95 duration-300 origin-top
+                  left-1/2 -translate-x-1/2
+                  w-[calc(100vw-2.5rem)] max-w-sm
+                  md:w-72 md:max-w-none md:translate-x-0
+                  ${isRTL ? 'md:left-0' : 'md:right-0'}
+                `}
+              >
+                <div 
+                  className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
+                  style={{ backgroundColor: accentColor }}
+                >
+                  <p className="font-black text-xl italic truncate">{currentUser.full_name} ✨</p>
+                </div>
+                
                 <div className="space-y-1">
                   {currentUser.role === 'ADMIN' && (
                     <button onClick={() => handleMenuItemClick('ADMIN')} className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl transition-all flex items-center gap-3 group/admin">
