@@ -280,14 +280,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {isMenuOpen && currentUser && (
-              <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} mt-4 w-72 bg-white rounded-[2.5rem] shadow-[0_25px_80px_rgba(0,0,0,0.2)] border border-white overflow-hidden animate-in zoom-in-95 duration-300 origin-top p-3 z-[120]`}>
-                <div 
-                  className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
-                  style={{ backgroundColor: accentColor }}
-                >
-                  <p className="font-black text-xl italic truncate">{currentUser.full_name} ✨</p>
-                </div>
-                
+  <div
+    className={`
+      absolute mt-4 z-[120] p-3
+      w-[calc(100vw-3rem)] max-w-xs
+      left-1/2 -translate-x-1/2
+      md:w-72 md:${isRTL ? 'left-0 -translate-x-0' : 'right-0 translate-x-0'}
+      bg-white rounded-[2.5rem]
+      shadow-[0_25px_80px_rgba(0,0,0,0.2)]
+      border border-white overflow-hidden
+      animate-in zoom-in-95 duration-300 origin-top
+    `}
+  >
+    {/* contenu inchangé */}
+    <div 
+      className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
+      style={{ backgroundColor: accentColor }}
+    >
+      <p className="font-black text-xl italic truncate">{currentUser.full_name} ✨</p>
+    </div>
+    {/* ... le reste du menu ... */}
+  </div>
+)}
                 <div className="space-y-1">
                   {currentUser.role === 'ADMIN' && (
                     <button onClick={() => handleMenuItemClick('ADMIN')} className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl transition-all flex items-center gap-3 group/admin">
