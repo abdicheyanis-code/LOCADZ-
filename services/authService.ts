@@ -107,7 +107,8 @@ const fetchOrCreateCurrentUserProfile = async (): Promise<UserProfile | null> =>
 export const authService = {
   /**
    * Inscription : email + mot de passe + nom + téléphone + rôle
-   * Supabase enverra un email de confirmation.
+   * - Vérifie d'abord si le téléphone est déjà utilisé
+   * - Supabase enverra un email de confirmation SI et SEULEMENT SI l'inscription réussit.
    */
   register: async (
     fullName: string,
@@ -117,14 +118,30 @@ export const authService = {
     password: string
   ): Promise<{ error: string | null }> => {
     const cleanEmail = email.toLowerCase().trim();
+    const cleanPhone = phone.replace(/\s/g, '');
 
+    // 1) Vérifie si le téléphone est déjà utilisé dans la table users
+    if (cleanPhone) {
+      const { data: existingPhone, error: phoneError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('phone_number', cleanPhone)
+        .maybeSingle();
+
+      if (!phoneError && existingPhone) {
+        // Numéro déjà utilisé → on annule l'inscription AVANT le signUp
+        return { error: 'PHONE_EXISTS' };
+      }
+    }
+
+    // 2) Tentative d'inscription Supabase Auth
     const { error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
       options: {
         data: {
           full_name: fullName,
-          phone_number: phone,
+          phone_number: cleanPhone,
           role,
         },
       },
@@ -133,6 +150,7 @@ export const authService = {
     if (error) {
       const msg = (error.message || '').toLowerCase();
       if (msg.includes('user already registered') || msg.includes('already exists')) {
+        // Email déjà utilisé → pas d'email de vérification envoyé par Supabase
         return { error: 'EMAIL_EXISTS' };
       }
       return { error: error.message || 'UNKNOWN_ERROR' };
@@ -213,5 +231,21 @@ export const authService = {
       return profile;
     }
     return null;
+  },
+
+  /**
+   * Envoie un email de réinitialisation de mot de passe
+   * (UI de "nouveau mot de passe" à implémenter plus tard)
+   */
+  forgotPassword: async (email: string): Promise<void> => {
+    const cleanEmail = email.toLowerCase().trim();
+
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+      redirectTo: 'https://locadz-app.vercel.app',
+    });
+
+    if (error) {
+      throw error;
+    }
   },
 };
