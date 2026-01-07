@@ -111,17 +111,27 @@ export interface Booking {
   traveler_id: string;
   start_date: string;
   end_date: string;
+
+  // Prix total payé par le client (base + 8 %)
   total_price: number;
+
+  // Ancien champ, tu peux l'utiliser comme "revenu plateforme"
   commission_fee: number;
+
+  // Nouveau modèle détaillé (optionnel tant que tu as des anciennes lignes)
+  base_price?: number;
+  service_fee_client?: number;
+  host_commission?: number;
+  payout_host?: number;
+
   status: BookingStatus;
   payment_method: PaymentMethod;
   payment_id?: string;
-  receipt_url?: string; 
+  receipt_url?: string;
   created_at: string;
   property_title?: string;
   traveler_name?: string;
 }
-
 export interface Favorite {
   id: string;
   traveler_id: string; 
