@@ -2,8 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { NotificationProvider } from './components/NotificationProvider';
+import { BrowserRouter } from 'react-router-dom';
 
-// Désactivation du service worker comme avant
+// Désactivation du service worker pour éviter les problèmes de cache
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.getRegistrations().then(registrations => {
@@ -22,8 +23,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <NotificationProvider>
-      <App />
-    </NotificationProvider>
+    <BrowserRouter>
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );
