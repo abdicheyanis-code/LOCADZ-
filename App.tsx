@@ -240,8 +240,14 @@ useEffect(() => {
               <div className="px-6 md:px-20 max-w-7xl mx-auto">
                 {activeView === 'ADMIN' && <AdminDashboard />}
                 {activeView === 'PROFILE' && currentUser && <ProfileSettings currentUser={currentUser} language={language} translations={t} onLogout={() => { authService.logout(); setCurrentUser(null); setShowWelcome(true); }} onSwitchRole={() => {}} />}
-                {activeView === 'ABOUT' && <AboutUs language={language} translations={t} />}
-                {activeView === 'HOST_DASH' && <HostDashboard hostId={currentUser!.id} hostName={currentUser!.full_name} onRefresh={refreshData} />}
+                {activeView === 'ABOUT' && (
+  <>
+    <AboutUs language={language} translations={t} />
+    <LegalPages language={language} />
+  </>
+)}
+                
+              {activeView === 'HOST_DASH' && <HostDashboard hostId={currentUser!.id} hostName={currentUser!.full_name} onRefresh={refreshData} />}
               </div>
             </main>
           </>
