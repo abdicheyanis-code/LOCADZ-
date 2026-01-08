@@ -132,67 +132,84 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const { notify } = useNotification();
   
   const handleBooking = async () => {
-    if (!currentUser) {
-      alert('Veuillez vous connecter pour réserver.');
-      return;
-    }
-    if (!startDate || !endDate || nights <= 0) {
-      alert('Merci de sélectionner des dates valides.');
-      return;
-    }
+  if (!currentUser) {
+    notify({ type: 'error', message: 'Veuillez vous connecter pour réserver.' });
+    return;
+  }
+  if (!startDate || !endDate || nights <= 0) {
+    notify({ type: 'error', message: 'Merci de sélectionner des dates valides.' });
+    return;
+  }
 
-    setStep('PROCESSING');
-    setIsBlocking(true);
+  setStep('PROCESSING');
+  setIsBlocking(true);
 
-    // Vérification de disponibilité
-    const isAvail = await bookingService.isRangeAvailable(
-      property.id,
-      new Date(startDate),
-      new Date(endDate)
-    );
+  // Vérification de disponibilité
+  const isAvail = await bookingService.isRangeAvailable(
+    property.id,
+    new Date(startDate),
+    new Date(endDate)
+  );
 
-    if (!isAvail) {
-      alert("Désolé, ces dates viennent d'être bloquées par un autre voyageur.");
-      setStep('DATES');
-      setIsBlocking(false);
-      return;
-    }
+  if (!isAvail) {
+    notify({
+      type: 'error',
+      message: "Désolé, ces dates viennent d'être bloquées par un autre voyageur.",
+    });
+    setStep('DATES');
+    setIsBlocking(false);
+    return;
+  }
 
-    // Simule une "session de paiement" locale (pour garder ta logique existante)
-    const result = await createLocalPaymentSession(property.id, pricing);
+  // Simule une "session de paiement" locale
+  const result = await createLocalPaymentSession(property.id, pricing);
 
-    if (result.success) {
-      const newBooking = await bookingService.createBooking({
-        property_id: property.id,
-        traveler_id: currentUser.id,
-        start_date: startDate,
-        end_date: endDate,
-        total_price: pricing.total,
-        payment_method: paymentMethod,
-        payment_id: result.transactionId,
-        // on ne met plus de receipt_url base64 ici, les preuves sont dans payment_proofs
-        receipt_url: undefined,
-      });
+  if (result.success) {
+    const newBooking = await bookingService.createBooking({
+      property_id: property.id,
+      traveler_id: currentUser.id,
+      start_date: startDate,
+      end_date: endDate,
 
-      if (newBooking) {
-        setLastBookingId(newBooking.id);
+      // Nouveau modèle de pricing LOCADZ :
+      total_price: pricing.totalClient,              // ce que paie le client
+      base_price: pricing.base,                      // base (nuits × prix_nuit)
+      service_fee_client: pricing.serviceFeeClient,  // 8 % côté client
+      host_commission: pricing.hostCommission,       // 10 % pris sur l’hôte
+      payout_host: pricing.payoutHost,               // ce que tu dois verser à l’hôte
 
-        if (paymentMethod === 'BARIDIMOB') {
-          // On demande maintenant la preuve de paiement
-          setStep('UPLOAD_RECEIPT');
-        } else {
-          setStep('SUCCESS');
-          onBookingSuccess();
-        }
+      payment_method: paymentMethod,
+      payment_id: result.transactionId,
+      receipt_url: undefined,
+    });
+
+    if (newBooking) {
+      setLastBookingId(newBooking.id);
+
+      if (paymentMethod === 'BARIDIMOB') {
+        setStep('UPLOAD_RECEIPT');
       } else {
-        setStep('CONFIRMATION');
+        notify({ type: 'success', message: 'Demande de réservation envoyée.' });
+        setStep('SUCCESS');
+        onBookingSuccess();
       }
     } else {
+      notify({
+        type: 'error',
+        message: "Impossible de créer la réservation, veuillez réessayer.",
+      });
       setStep('CONFIRMATION');
     }
+  } else {
+    notify({
+      type: 'error',
+      message: "La simulation de paiement a échoué, veuillez réessayer.",
+    });
+    setStep('CONFIRMATION');
+  }
 
-    setIsBlocking(false);
-  };
+  setIsBlocking(false);
+};
 
   const handleUploadProof = async () => {
     if (!currentUser) {
