@@ -46,57 +46,52 @@ const App: React.FC = () => {
 
   const t = TRANSLATIONS[language];
 
-  useEffect(() => {
-    const initApp = async () => {
-      const session = authService.getSession();
-      if (session) {
-        setCurrentUser(session);
-        setUserRole(session.role);
-        
-        try {
-          const latestProfile = await authService.login(session.email);
-          if (latestProfile) {
-            console.log("🔄 Session synchronisée avec Supabase. Rôle actuel:", latestProfile.role);
-            setCurrentUser(latestProfile);
-            setUserRole(latestProfile.role);
-            setDbStatus('CONNECTED');
-          }
-        } catch (e) {
-          console.warn("Impossible de synchroniser le profil, utilisation du cache local.");
-          setDbStatus('ERROR');
-        }
-      }
-      setHasCheckedSession(true);
-      await refreshData();
-    };
-    initApp();
-  }, []);
-
-  const refreshData = async () => {
-    const session = authService.getSession();
+useEffect(() => {
+  const initApp = async () => {
     setIsLoading(true);
+
     try {
-      const props = await propertyService.getAll();
-      
-      if (props && props.length > 0) {
-        setProperties(props);
+      // On essaye d'abord de rafraîchir la session directement depuis Supabase
+      const freshProfile = await authService.refreshSession();
+
+      if (freshProfile) {
+        // L'utilisateur est encore connecté côté Supabase
+        setCurrentUser(freshProfile);
+        setUserRole(freshProfile.role);
         setDbStatus('CONNECTED');
       } else {
-        setProperties(INITIAL_PROPERTIES as any);
+        // Pas de session Supabase → on considère l'utilisateur déconnecté
+        setCurrentUser(null);
+        setUserRole('TRAVELER');
+        setShowWelcome(true);
+        setDbStatus('ERROR');
+        // On nettoie aussi le localStorage pour être cohérent
+        authService.logout();
+      }
+    } catch (e) {
+      console.warn('Impossible de rafraîchir la session depuis Supabase.', e);
+
+      // Fallback : on tente le cache local, mais on sait que la session backend est douteuse
+      const localSession = authService.getSession();
+      if (localSession) {
+        setCurrentUser(localSession);
+        setUserRole(localSession.role);
+        setDbStatus('ERROR'); // on sait que la connexion backend n'est pas OK
+      } else {
+        setCurrentUser(null);
+        setUserRole('TRAVELER');
+        setShowWelcome(true);
         setDbStatus('ERROR');
       }
-
-      if (session) {
-        const favs = await favoriteService.getUserFavoritePropertyIds(session.id);
-        setFavoriteIds(favs);
-      }
-    } catch (e) { 
-      setDbStatus('ERROR');
-      setProperties(INITIAL_PROPERTIES as any);
-    } finally { 
-      setIsLoading(false); 
+    } finally {
+      setHasCheckedSession(true);
+      await refreshData();
+      setIsLoading(false);
     }
   };
+
+  initApp();
+}, []);
 
   const getAmbientColor = (catId: string) => {
     switch (catId) {
