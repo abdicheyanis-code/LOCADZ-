@@ -85,6 +85,20 @@ export interface PayoutRecord {
   status: 'COMPLETED' | 'PROCESSING';
 }
 
+export interface PaymentProof {
+  id: string;
+  booking_id: string;
+  user_id: string;
+  payment_method: PaymentMethod;
+  amount: number;
+  proof_url: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  created_at: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+}
+
 export interface Property {
   id: string;
   host_id: string;
