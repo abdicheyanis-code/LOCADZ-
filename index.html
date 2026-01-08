@@ -1,35 +1,55 @@
-
 <!DOCTYPE html>
 <html lang="fr">
   <head>
-     <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
 
-  <!-- Icône d’onglet LOCADZ -->
-  <link rel="icon" type="image/png" href="/locadz-icon.png" />
+    <!-- Titre de l’onglet -->
+    <title>LOCADZ · Locations & séjours en Algérie</title>
 
-  <!-- Titre de l’onglet -->
-  <title>LOCADZ · Locations & séjours en Algérie</title>
+    <!-- Icône d’onglet LOCADZ (placer locadz-icon.png dans /public) -->
+    <link rel="icon" type="image/png" href="/locadz-icon.png" />
 
-  <!-- (Optionnel) Description SEO -->
-  <meta
-    name="description"
-    content="LOCADZ est une plateforme de réservation de logements et séjours en Algérie : villas, chalets, sahara, front de mer."
-  />
-</head>
+    <!-- Description SEO -->
+    <meta
+      name="description"
+      content="LOCADZ est une plateforme de réservation de logements et séjours en Algérie : villas, chalets, Sahara, front de mer."
+    />
+
     <!-- PWA & Mobile Optimization -->
     <meta name="theme-color" content="#050505" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <meta name="apple-mobile-web-app-title" content="LOCADZ" />
-    <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/avataaars/svg?seed=locadz-icon" />
+    <link
+      rel="apple-touch-icon"
+      href="https://api.dicebear.com/7.x/avataaars/svg?seed=locadz-icon"
+    />
     <link rel="manifest" href="manifest.json" />
 
+    <!-- Tailwind CSS, Fonts & Leaflet CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+
+    <!-- Styles globaux -->
+    <link rel="stylesheet" href="/index.css" />
+
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -41,12 +61,12 @@
         /* Empêcher le rebond élastique sur mobile */
         overscroll-behavior-y: none;
       }
-      
+
       /* Adaptation aux encoches (notches) */
       .safe-area-inset-top {
         padding-top: env(safe-area-inset-top);
       }
-      
+
       .no-scrollbar::-webkit-scrollbar {
         display: none;
       }
@@ -54,27 +74,42 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
       }
-      
+
       @keyframes drift {
-        0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-        33% { transform: translate(5%, 5%) rotate(5deg) scale(1.1); }
-        66% { transform: translate(-5%, 2%) rotate(-5deg) scale(0.9); }
-        100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        0% {
+          transform: translate(0, 0) rotate(0deg) scale(1);
+        }
+        33% {
+          transform: translate(5%, 5%) rotate(5deg) scale(1.1);
+        }
+        66% {
+          transform: translate(-5%, 2%) rotate(-5deg) scale(0.9);
+        }
+        100% {
+          transform: translate(0, 0) rotate(0deg) scale(1);
+        }
       }
       .animate-drift {
         animation: drift 25s ease-in-out infinite;
       }
-      
+
       @keyframes slow-zoom {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.05); }
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
       }
       .animate-slow-zoom {
         animation: slow-zoom 30s ease-in-out infinite;
       }
 
       @keyframes shine {
-        100% { left: 125%; }
+        100% {
+          left: 125%;
+        }
       }
       .animate-shine {
         animation: shine 0.8s ease-in-out;
@@ -95,24 +130,24 @@
         -webkit-tap-highlight-color: transparent;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.48.1",
-    "leaflet": "https://esm.sh/leaflet@1.9.4"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-<head>
 
-    
+    <!-- Import map pour les dépendances ESM -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://esm.sh/react@^19.2.3/",
+          "react": "https://esm.sh/react@^19.2.3",
+          "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+          "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+          "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.48.1",
+          "leaflet": "https://esm.sh/leaflet@1.9.4"
+        }
+      }
+    </script>
+  </head>
+
   <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
