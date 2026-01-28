@@ -156,7 +156,7 @@ const App: React.FC = () => {
     try {
       const props = await propertyService.getAll();
 
-  if (props && props.length > 0) { ... } else { setProperties(INITIAL_PROPERTIES as any); }
+        if (props && props.length > 0) {
         setProperties(props);
         setDbStatus('CONNECTED');
       } else {
