@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../services/adminService';
-import { authService } from '../services/authService';
 import { paymentService } from '../services/paymentService';
 import { formatCurrency } from '../services/stripeService';
 import { Booking, UserProfile, PaymentProof } from '../types';
@@ -8,9 +7,19 @@ import { useNotification } from './NotificationProvider';
 
 type AdminTab = 'STATS' | 'USERS' | 'VERIFICATIONS' | 'PAYMENTS';
 
-export const AdminDashboard: React.FC = () => {
+interface AdminDashboardProps {
+  currentUser: UserProfile;
+}
+
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  currentUser,
+}) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('STATS');
-  const [stats, setStats] = useState({ totalVolume: 0, totalCommission: 0, count: 0 });
+  const [stats, setStats] = useState({
+    totalVolume: 0,
+    totalCommission: 0,
+    count: 0,
+  });
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [pendingUsers, setPendingUsers] = useState<UserProfile[]>([]);
@@ -18,13 +27,16 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [reviewingProofId, setReviewingProofId] = useState<string | null>(null);
+  const [reviewingProofId, setReviewingProofId] = useState<string | null>(
+    null
+  );
 
   const { notify } = useNotification();
 
   const loadData = async (silent = false) => {
-    const user = authService.getSession();
-    if (!user || user.role !== 'ADMIN') {
+    // Décision d'accès basée UNIQUEMENT sur currentUser.role,
+    // pas sur un cache local qui peut être faux.
+    if (!currentUser || currentUser.role !== 'ADMIN') {
       setUnauthorized(true);
       notify({
         type: 'error',
@@ -75,9 +87,10 @@ export const AdminDashboard: React.FC = () => {
   };
 
   useEffect(() => {
+    // Recharge les données quand l'ID ou le rôle du user change
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser.id, currentUser.role]);
 
   const handleApprove = async (id: string) => {
     const ok = await adminService.approveHost(id);
@@ -87,7 +100,8 @@ export const AdminDashboard: React.FC = () => {
     } else {
       notify({
         type: 'error',
-        message: "Impossible d'approuver cet hôte. Réessayez plus tard.",
+        message:
+          "Impossible d'approuver cet hôte. Réessayez plus tard.",
       });
     }
   };
@@ -100,7 +114,8 @@ export const AdminDashboard: React.FC = () => {
     } else {
       notify({
         type: 'error',
-        message: "Impossible de mettre à jour le rôle de l'utilisateur.",
+        message:
+          "Impossible de mettre à jour le rôle de l'utilisateur.",
       });
     }
   };
@@ -199,25 +214,27 @@ export const AdminDashboard: React.FC = () => {
 
       {/* Tab Navigation */}
       <div className="flex bg-white/5 backdrop-blur-3xl p-2 rounded-[2.5rem] border border-white/10 max-w-3xl mx-auto">
-        {(['STATS', 'VERIFICATIONS', 'USERS', 'PAYMENTS'] as AdminTab[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all ${
-              activeTab === tab
-                ? 'bg-indigo-600 text-white shadow-xl'
-                : 'text-white/40 hover:bg-white/5'
-            }`}
-          >
-            {tab === 'STATS'
-              ? '📊 Performances'
-              : tab === 'USERS'
-              ? '👥 Membres'
-              : tab === 'VERIFICATIONS'
-              ? `🛂 Alertes (${pendingUsers.length})`
-              : `💸 Paiements (${paymentProofs.length})`}
-          </button>
-        ))}
+        {(['STATS', 'VERIFICATIONS', 'USERS', 'PAYMENTS'] as AdminTab[]).map(
+          tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === tab
+                  ? 'bg-indigo-600 text-white shadow-xl'
+                  : 'text-white/40 hover:bg-white/5'
+              }`}
+            >
+              {tab === 'STATS'
+                ? '📊 Performances'
+                : tab === 'USERS'
+                ? '👥 Membres'
+                : tab === 'VERIFICATIONS'
+                ? `🛂 Alertes (${pendingUsers.length})`
+                : `💸 Paiements (${paymentProofs.length})`}
+            </button>
+          )
+        )}
       </div>
 
       {/* STATS */}
@@ -230,7 +247,9 @@ export const AdminDashboard: React.FC = () => {
             <h2 className="text-5xl font-black italic">
               {formatCurrency(stats.totalCommission)}
             </h2>
-            <div className="absolute -right-4 -bottom-4 text-9xl opacity-10">💰</div>
+            <div className="absolute -right-4 -bottom-4 text-9xl opacity-10">
+              💰
+            </div>
           </div>
           <div className="bg-white/5 border border-white/10 p-10 rounded-[4rem] text-white">
             <p className="text-[10px] font-black uppercase opacity-40 mb-2">
@@ -270,7 +289,9 @@ export const AdminDashboard: React.FC = () => {
                   <div>
                     <p className="font-black text-indigo-950">{u.full_name}</p>
                     <button
-                      onClick={() => u.id_document_url && window.open(u.id_document_url)}
+                      onClick={() =>
+                        u.id_document_url && window.open(u.id_document_url)
+                      }
                       className="text-[9px] font-black text-indigo-400 uppercase underline"
                     >
                       Voir CNI ↗
@@ -316,17 +337,27 @@ export const AdminDashboard: React.FC = () => {
                   <tr key={u.id} className="group hover:bg-white/5 transition-all">
                     <td className="py-6 px-4">
                       <div className="flex items-center gap-4">
-                        <img src={u.avatar_url} className="w-10 h-10 rounded-xl" alt="" />
+                        <img
+                          src={u.avatar_url}
+                          className="w-10 h-10 rounded-xl"
+                          alt=""
+                        />
                         <div>
-                          <p className="text-sm font-bold text-white">{u.full_name}</p>
-                          <p className="text-[10px] text-white/40">{u.email}</p>
+                          <p className="text-sm font-bold text-white">
+                            {u.full_name}
+                          </p>
+                          <p className="text-[10px] text-white/40">
+                            {u.email}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="py-6 px-4">
                       <select
                         value={u.role}
-                        onChange={e => handleChangeRole(u.id, e.target.value)}
+                        onChange={e =>
+                          handleChangeRole(u.id, e.target.value)
+                        }
                         className="bg-black/40 border border-white/10 text-[10px] font-black text-white rounded-lg px-2 py-1 outline-none"
                       >
                         <option value="TRAVELER">TRAVELER</option>
