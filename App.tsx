@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Categories } from './components/Categories';
 import { ListingCard } from './components/ListingCard';
-import { GeminiAssistant } from './components/GeminiAssistant';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { FilterBar } from './components/FilterBar';
 import { PropertyDetail } from './components/PropertyDetail';
@@ -22,7 +21,6 @@ import { favoriteService } from './services/favoriteService';
 import { bookingService } from './services/bookingService';
 import { parseSmartSearch } from './services/geminiService';
 import { TRANSLATIONS } from './services/i18n';
-
 
 type ActiveView =
   | 'EXPLORE'
@@ -136,16 +134,13 @@ const App: React.FC = () => {
       setIsLoading(true);
 
       try {
-        // On essaye d'abord de rafraîchir la session directement depuis Supabase
         const freshProfile = await authService.refreshSession();
 
         if (freshProfile) {
-          // L'utilisateur est encore connecté côté Supabase
           setCurrentUser(freshProfile);
           setUserRole(freshProfile.role);
           setDbStatus('CONNECTED');
         } else {
-          // Pas de session Supabase → on considère l'utilisateur déconnecté
           setCurrentUser(null);
           setUserRole('TRAVELER');
           setShowWelcome(true);
@@ -155,7 +150,6 @@ const App: React.FC = () => {
       } catch (e) {
         console.warn('Impossible de rafraîchir la session depuis Supabase.', e);
 
-        // Backend KO → on ne fait plus confiance au cache local
         setCurrentUser(null);
         setUserRole('TRAVELER');
         setShowWelcome(true);
@@ -397,136 +391,3 @@ const App: React.FC = () => {
                           Signature
                         </span>
                       </h1>
-                    </div>
-                  </div>
-
-                  <div className="sticky top-28 z-[100] px-4 md:px-0">
-                    <div className="max-w-4xl mx-auto bg-black/30 backdrop-blur-3xl border border-white/10 rounded-[4rem] p-2 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
-                      <Categories
-                        selectedCategory={selectedCategory}
-                        onSelect={setSelectedCategory}
-                        onHover={setHoveredCategory}
-                        accentColor={ambientColor}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
-                    <FilterBar
-                      maxPrice={maxPrice}
-                      setMaxPrice={setMaxPrice}
-                      minRating={minRating}
-                      setMinRating={setMinRating}
-                      minReviews={0}
-                      setMinReviews={() => {}}
-                      onReset={() => {
-                        setMaxPrice(200000);
-                        setMinRating(0);
-                      }}
-                      accentColor={ambientColor}
-                    />
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-20 mt-12">
-                      {filteredProperties.length > 0 ? (
-                        filteredProperties.map((p, idx) => (
-                          <div
-                            key={p.id}
-                            onClick={() => setSelectedProperty(p)}
-                            className={`animate-in fade-in zoom-in-95 duration-1000 ${
-                              idx % 2 === 1 ? 'md:mt-24' : ''
-                            }`}
-                            style={{
-                              animationDelay: `${idx * 150}ms`,
-                            }}
-                          >
-                            <ListingCard
-                              property={{
-                                ...p,
-                                isFavorite: favoriteIds.includes(p.id),
-                              }}
-                              onToggleFavorite={toggleFavorite}
-                              accentColor={getAmbientColor(p.category)}
-                            />
-                          </div>
-                        ))
-                      ) : (
-                        <div className="col-span-full py-60 text-center flex flex-col items-center animate-in fade-in">
-                          <span className="text-9xl mb-8 opacity-10">
-                            🏜️
-                          </span>
-                          <h3 className="text-4xl font-black italic tracking-tighter uppercase opacity-30">
-                            Aucun Trésor Trouvé
-                          </h3>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="px-6 md:px-20 max-w-7xl mx-auto">
-                 {activeView === 'ADMIN' && currentUser && (
-    <AdminDashboard currentUser={currentUser} />
-  )}
-
-                {activeView === 'PROFILE' && currentUser && (
-                  <ProfileSettings
-                    currentUser={currentUser}
-                    language={language}
-                    translations={t}
-                    onLogout={() => {
-                      authService.logout();
-                      setCurrentUser(null);
-                      setShowWelcome(true);
-                      navigate('/');
-                    }}
-                    onSwitchRole={() => {}}
-                  />
-                )}
-
-                {activeView === 'ABOUT' && (
-                  <>
-                    <AboutUs language={language} translations={t} />
-                    <LegalPages language={language} />
-                  </>
-                )}
-
-                {activeView === 'HOST_DASH' && currentUser && (
-                  <HostDashboard
-                    hostId={currentUser.id}
-                    hostName={currentUser.full_name}
-                    onRefresh={refreshData}
-                  />
-                )}
-              </div>
-            </main>
-          </>
-        )}
-      </div>
-
-      {selectedProperty && (
-        <PropertyDetail
-          property={selectedProperty}
-          isOpen={!!selectedProperty}
-          currentUser={currentUser}
-          onClose={() => setSelectedProperty(null)}
-          onBookingSuccess={refreshData}
-          language={language}
-          translations={t}
-        />
-      )}
-
-      <AuthModal
-        language={language}
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onSuccess={handleAuthSuccess}
-      />
-<FloatingAssistant currentProperty={selectedProperty} />
-
-      
-    </div>
-  );
-};
-
-export default App;
