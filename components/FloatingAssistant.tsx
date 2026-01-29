@@ -11,7 +11,7 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
 
   return (
     <>
-      {/* FLOATING BUBBLE */}
+      {/* Bulle flottante */}
       <button
         onClick={() => setOpen(true)}
         className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999]
@@ -25,7 +25,7 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
         <Sparkles size={20} />
       </button>
 
-      {/* OVERLAY */}
+      {/* Overlay noir clicable pour fermer */}
       {open && (
         <div
           className="fixed inset-0 z-[9998] bg-black/40 backdrop-blur-sm"
@@ -33,7 +33,7 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
         />
       )}
 
-      {/* PANEL */}
+      {/* Panneau de chat */}
       {open && (
         <div
           className="fixed top-20 left-1/2 -translate-x-1/2 z-[9999]
@@ -42,7 +42,7 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
                      border border-white/10
                      rounded-3xl shadow-[0_40px_120px_rgba(0,0,0,0.6)]
                      animate-in fade-in zoom-in-95 duration-300
-                     overflow-hidden flex flex-col"
+                     flex flex-col"
         >
           {/* HEADER */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
@@ -52,13 +52,14 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
             <button
               onClick={() => setOpen(false)}
               className="p-1 rounded-full hover:bg-white/10 transition"
+              aria-label="Fermer l’assistant"
             >
               <X size={18} />
             </button>
           </div>
 
-          {/* CONTENT */}
-          <div className="flex-1 overflow-hidden">
+          {/* CONTENU : on laisse le composant gérer le scroll */}
+          <div className="flex-1 min-h-0">
             <GeminiAssistant currentProperty={currentProperty} />
           </div>
         </div>
