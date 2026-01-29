@@ -1,19 +1,13 @@
 import { supabase } from '../supabaseClient';
 import { Booking, BookingStatus } from '../types';
 
-const LOCAL_BOOKINGS_KEY = 'locadz_local_bookings';
-
 export const bookingService = {
-  _getLocal: (): Booking[] => {
-    const saved = localStorage.getItem(LOCAL_BOOKINGS_KEY);
-    return saved ? JSON.parse(saved) : [];
-  },
-
-  _saveLocal: (bookings: Booking[]) => {
-    localStorage.setItem(LOCAL_BOOKINGS_KEY, JSON.stringify(bookings));
-  },
-
-  isRangeAvailable: async (propertyId: string, start: Date, end: Date): Promise<boolean> => {
+  // Vérifie si un créneau est dispo pour un bien
+  isRangeAvailable: async (
+    propertyId: string,
+    start: Date,
+    end: Date
+  ): Promise<boolean> => {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -21,10 +15,13 @@ export const bookingService = {
         .eq('property_id', propertyId)
         .in('status', ['PENDING_APPROVAL', 'APPROVED', 'PAID']);
 
-      let bookings = (data as any[]) || [];
       if (error) {
-        bookings = bookingService._getLocal().filter(b => b.property_id === propertyId);
+        console.error('isRangeAvailable error', error);
+        // En cas d’erreur backend, on ne bloque pas la réservation
+        return true;
       }
+
+      const bookings = (data as any[]) || [];
 
       return !bookings.some(booking => {
         const bStart = new Date(booking.start_date);
@@ -32,11 +29,12 @@ export const bookingService = {
         return start <= bEnd && end >= bStart;
       });
     } catch (e) {
+      console.error('isRangeAvailable exception', e);
       return true;
     }
   },
 
-  // Réservations d'un logement (hôte)
+  // Réservations d'un logement (pour l’hôte)
   getBookingsForProperty: async (propertyId: string): Promise<Booking[]> => {
     try {
       const { data, error } = await supabase
@@ -44,19 +42,17 @@ export const bookingService = {
         .select('*')
         .eq('property_id', propertyId)
         .in('status', ['APPROVED', 'PAID']);
-      
+
       if (error) throw error;
       return (data as Booking[]) || [];
     } catch (e) {
-      // Fallback pour la simulation locale
-      return bookingService._getLocal().filter(
-        b => b.property_id === propertyId && ['APPROVED', 'PAID'].includes(b.status)
-      );
+      console.error('getBookingsForProperty error', e);
+      return [];
     }
   },
 
   /**
-   * createBooking maintenant travaille avec le modèle LOCADZ :
+   * createBooking travaille avec le modèle LOCADZ :
    * - total_price = montant payé par le client (base + 8 %)
    * - base_price = base (nuits × prix_nuit)
    * - service_fee_client = 8 % client
@@ -67,17 +63,18 @@ export const bookingService = {
   createBooking: async (
     bookingData: Omit<Booking, 'id' | 'status' | 'created_at' | 'commission_fee'>
   ): Promise<Booking | null> => {
-    // Revenu plateforme = 8 % côté client + 10 % pris sur l’hôte
     const platformRevenue =
       Number(bookingData.service_fee_client ?? 0) +
       Number(bookingData.host_commission ?? 0);
 
+    // On laisse Supabase générer l'id si ta table a un default,
+    // mais on garde crypto.randomUUID si ton schéma attend un id fourni.
     const newBooking: Booking = {
       id: crypto.randomUUID(),
       ...bookingData,
       commission_fee: platformRevenue,
       status: 'PENDING_APPROVAL',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
 
     try {
@@ -86,47 +83,49 @@ export const bookingService = {
         .insert([newBooking])
         .select()
         .single();
-      
+
       if (error) throw error;
       return data as Booking;
     } catch (e) {
-      // Fallback localStorage
-      const local = bookingService._getLocal();
-      local.push(newBooking);
-      bookingService._saveLocal(local);
-      return newBooking;
+      console.error('createBooking error', e);
+      // Pas de fallback local : si l’insert échoue, on considère la résa non créée
+      return null;
     }
   },
 
-  updateBookingStatus: async (bookingId: string, status: BookingStatus): Promise<boolean> => {
+  updateBookingStatus: async (
+    bookingId: string,
+    status: BookingStatus
+  ): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('bookings')
         .update({ status })
         .eq('id', bookingId);
-      
+
       if (error) throw error;
       return true;
     } catch (e) {
-      const local = bookingService._getLocal();
-      const index = local.findIndex(b => b.id === bookingId);
-      if (index !== -1) {
-        local[index].status = status;
-        bookingService._saveLocal(local);
-        return true;
-      }
+      console.error('updateBookingStatus error', e);
       return false;
     }
   },
 
-  // Pour l’instant toujours très simplifié pour l’hôte
+  // Pour l’instant : hostBookings réels ou rien (pas de simulation locale)
   getHostBookings: async (hostId: string): Promise<Booking[]> => {
     try {
-      // En mode réel on ferait une requête join properties -> bookings
-      const localBookings = bookingService._getLocal();
-      return localBookings;
+      // Si ta table "bookings" a une colonne host_id :
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('host_id', hostId);
+
+      if (error) throw error;
+      return (data as Booking[]) || [];
     } catch (e) {
-      return bookingService._getLocal();
+      console.error('getHostBookings error', e);
+      // Si tu n’as pas host_id côté DB, ça retournera [] (pas de faux bookings)
+      return [];
     }
   },
 
@@ -136,11 +135,12 @@ export const bookingService = {
         .from('bookings')
         .select('*')
         .eq('traveler_id', userId);
-      
+
       if (error) throw error;
-      return data as Booking[];
+      return (data as Booking[]) || [];
     } catch (e) {
-      return bookingService._getLocal().filter(b => b.traveler_id === userId);
+      console.error('getUserBookings error', e);
+      return [];
     }
   },
 
@@ -149,6 +149,8 @@ export const bookingService = {
    * Fallback ancien modèle : total_price - commission_fee
    */
   getHostRevenue: async (properties: string[]): Promise<number> => {
+    if (!properties || properties.length === 0) return 0;
+
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -168,19 +170,9 @@ export const bookingService = {
         return sum + (Number(b.total_price) - Number(b.commission_fee || 0));
       }, 0);
     } catch (e) {
-      // Fallback local
-      const bookings = bookingService._getLocal().filter(
-        b =>
-          properties.includes(b.property_id) &&
-          ['APPROVED', 'PAID'].includes(b.status)
-      );
-
-      return bookings.reduce((sum, b) => {
-        if (b.payout_host != null) {
-          return sum + Number(b.payout_host);
-        }
-        return sum + (Number(b.total_price) - Number(b.commission_fee || 0));
-      }, 0);
+      console.error('getHostRevenue error', e);
+      // Pas de fallback local : en cas de souci backend, revenu = 0 (mais pas de chiffres fake)
+      return 0;
     }
-  }
+  },
 };
