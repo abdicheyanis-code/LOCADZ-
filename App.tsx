@@ -154,7 +154,7 @@ const App: React.FC = () => {
       } catch (e) {
         console.warn('Impossible de rafraîchir la session depuis Supabase.', e);
 
-        // IMPORTANT : ne plus réutiliser le cache local en cas d'échec backend
+        // Backend KO → on ne fait plus confiance au cache local
         setCurrentUser(null);
         setUserRole('TRAVELER');
         setShowWelcome(true);
@@ -297,4 +297,232 @@ const App: React.FC = () => {
         </div>
 
         <div
-          className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full 
+          className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full blur-[180px] opacity-[0.12] animate-drift transition-colors duration-[4000ms]"
+          style={{ background: `radial-gradient(circle, ${ambientColor}, transparent)` }}
+        />
+
+        <div className="absolute inset-0 bg-grain pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
+      </div>
+
+      {/* APP SHELL */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {!currentUser ? (
+          <AuthLanding
+            language={language}
+            onLanguageChange={setLanguage}
+            onOpenAuth={() => setIsAuthOpen(true)}
+            translations={t}
+          />
+        ) : showWelcome ? (
+          <WelcomeScreen
+            currentUser={currentUser}
+            currentRole={userRole}
+            onSelectRole={role => {
+              setUserRole(role);
+              handleNavigate(
+                role === 'HOST' ? 'HOST_DASH' : 'EXPLORE',
+                true
+              );
+            }}
+            onNavigate={view =>
+              handleNavigate(view as ActiveView, true)
+            }
+            language={language}
+            translations={t}
+          />
+        ) : (
+          <>
+            <Navbar
+              userRole={userRole}
+              currentUser={currentUser}
+              language={language}
+              onLanguageChange={setLanguage}
+              onSearch={async q => {
+                const m = await parseSmartSearch(
+                  q,
+                  CATEGORIES.map(c => c.id)
+                );
+                if (m) setSelectedCategory(m);
+              }}
+              onSwitchRole={() => {
+                const nr =
+                  userRole === 'TRAVELER' ? 'HOST' : 'TRAVELER';
+                setUserRole(nr);
+                handleNavigate(
+                  nr === 'HOST' ? 'HOST_DASH' : 'EXPLORE',
+                  true
+                );
+              }}
+              onOpenAuth={() => setIsAuthOpen(true)}
+              onLogout={() => {
+                authService.logout();
+                setCurrentUser(null);
+                setShowWelcome(true);
+                navigate('/');
+              }}
+              onGoHome={() => {
+                setShowWelcome(true);
+                navigate('/');
+              }}
+              onNavigate={v =>
+                handleNavigate(v as ActiveView, true)
+              }
+              accentColor={ambientColor}
+              dbStatus={dbStatus}
+            />
+
+            <main className="flex-1 transition-all duration-1000 pt-32 pb-40">
+              {activeView === 'EXPLORE' && (
+                <div className="space-y-16 animate-in fade-in slide-in-from-bottom-20 duration-1000">
+                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
+                    <div className="flex flex-col gap-2 animate-in slide-in-from-left duration-[1200ms]">
+                      <div className="flex items-center gap-6">
+                        <div
+                          className="h-[1px] w-16 opacity-30"
+                          style={{ backgroundColor: ambientColor }}
+                        ></div>
+                        <span
+                          className="text-[10px] font-black uppercase tracking-[0.8em] transition-colors duration-1000"
+                          style={{ color: ambientColor }}
+                        >
+                          LOCADZ DZ COLLECTION
+                        </span>
+                      </div>
+                      <h1 className="text-6xl md:text-[10rem] font-black italic tracking-tighter leading-[0.8] uppercase select-none">
+                        {activeCategory.label}
+                        <br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/40 to-transparent">
+                          Signature
+                        </span>
+                      </h1>
+                    </div>
+                  </div>
+
+                  <div className="sticky top-28 z-[100] px-4 md:px-0">
+                    <div className="max-w-4xl mx-auto bg-black/30 backdrop-blur-3xl border border-white/10 rounded-[4rem] p-2 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+                      <Categories
+                        selectedCategory={selectedCategory}
+                        onSelect={setSelectedCategory}
+                        onHover={setHoveredCategory}
+                        accentColor={ambientColor}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
+                    <FilterBar
+                      maxPrice={maxPrice}
+                      setMaxPrice={setMaxPrice}
+                      minRating={minRating}
+                      setMinRating={setMinRating}
+                      minReviews={0}
+                      setMinReviews={() => {}}
+                      onReset={() => {
+                        setMaxPrice(200000);
+                        setMinRating(0);
+                      }}
+                      accentColor={ambientColor}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-20 mt-12">
+                      {filteredProperties.length > 0 ? (
+                        filteredProperties.map((p, idx) => (
+                          <div
+                            key={p.id}
+                            onClick={() => setSelectedProperty(p)}
+                            className={`animate-in fade-in zoom-in-95 duration-1000 ${
+                              idx % 2 === 1 ? 'md:mt-24' : ''
+                            }`}
+                            style={{
+                              animationDelay: `${idx * 150}ms`,
+                            }}
+                          >
+                            <ListingCard
+                              property={{
+                                ...p,
+                                isFavorite: favoriteIds.includes(p.id),
+                              }}
+                              onToggleFavorite={toggleFavorite}
+                              accentColor={getAmbientColor(p.category)}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-full py-60 text-center flex flex-col items-center animate-in fade-in">
+                          <span className="text-9xl mb-8 opacity-10">
+                            🏜️
+                          </span>
+                          <h3 className="text-4xl font-black italic tracking-tighter uppercase opacity-30">
+                            Aucun Trésor Trouvé
+                          </h3>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="px-6 md:px-20 max-w-7xl mx-auto">
+                {activeView === 'ADMIN' && <AdminDashboard />}
+
+                {activeView === 'PROFILE' && currentUser && (
+                  <ProfileSettings
+                    currentUser={currentUser}
+                    language={language}
+                    translations={t}
+                    onLogout={() => {
+                      authService.logout();
+                      setCurrentUser(null);
+                      setShowWelcome(true);
+                      navigate('/');
+                    }}
+                    onSwitchRole={() => {}}
+                  />
+                )}
+
+                {activeView === 'ABOUT' && (
+                  <>
+                    <AboutUs language={language} translations={t} />
+                    <LegalPages language={language} />
+                  </>
+                )}
+
+                {activeView === 'HOST_DASH' && currentUser && (
+                  <HostDashboard
+                    hostId={currentUser.id}
+                    hostName={currentUser.full_name}
+                    onRefresh={refreshData}
+                  />
+                )}
+              </div>
+            </main>
+          </>
+        )}
+      </div>
+
+      {selectedProperty && (
+        <PropertyDetail
+          property={selectedProperty}
+          isOpen={!!selectedProperty}
+          currentUser={currentUser}
+          onClose={() => setSelectedProperty(null)}
+          onBookingSuccess={refreshData}
+          language={language}
+          translations={t}
+        />
+      )}
+
+      <AuthModal
+        language={language}
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+
+      <GeminiAssistant currentProperty={selectedProperty} />
+    </div>
+  );
+};
+
+export default App;
