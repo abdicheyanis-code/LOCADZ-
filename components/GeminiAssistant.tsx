@@ -225,7 +225,7 @@ export const GeminiAssistant: React.FC<GeminiAssistantProps> = ({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col text-sm text-white">
+    <div className="flex flex-col text-sm text-white max-h-[60vh]">
       {/* ZONE MESSAGES */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
