@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { supabase } from '../supabaseClient';
 import { adminService } from '../services/adminService';
 import { paymentService } from '../services/paymentService';
 import { formatCurrency } from '../services/stripeService';
@@ -27,15 +28,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [reviewingProofId, setReviewingProofId] = useState<string | null>(
-    null
-  );
+  const [reviewingProofId, setReviewingProofId] = useState<string | null>(null);
 
   const { notify } = useNotification();
 
   const loadData = async (silent = false) => {
-    // Décision d'accès basée UNIQUEMENT sur currentUser.role,
-    // pas sur un cache local qui peut être faux.
+    // Décision d'accès basée uniquement sur currentUser.role
     if (!currentUser || currentUser.role !== 'ADMIN') {
       setUnauthorized(true);
       notify({
@@ -87,7 +85,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   useEffect(() => {
-    // Recharge les données quand l'ID ou le rôle du user change
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser.id, currentUser.role]);
@@ -100,8 +97,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } else {
       notify({
         type: 'error',
-        message:
-          "Impossible d'approuver cet hôte. Réessayez plus tard.",
+        message: "Impossible d'approuver cet hôte. Réessayez plus tard.",
       });
     }
   };
@@ -114,10 +110,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } else {
       notify({
         type: 'error',
-        message:
-          "Impossible de mettre à jour le rôle de l'utilisateur.",
+        message: "Impossible de mettre à jour le rôle de l'utilisateur.",
       });
     }
+  };
+
+  const handleOpenIdDoc = async (u: UserProfile) => {
+    if (!u.id_document_url) {
+      notify({
+        type: 'error',
+        message: "Aucun document d'identité pour cet utilisateur.",
+      });
+      return;
+    }
+
+    // Cas 1 : ancienne version où on stockait une URL complète
+    if (u.id_document_url.startsWith('http')) {
+      window.open(u.id_document_url, '_blank');
+      return;
+    }
+
+    // Cas 2 : nouvelle version, on a stocké un PATH dans le bucket privé id_documents
+    const { data, error } = await supabase.storage
+      .from('id_documents')
+      .createSignedUrl(u.id_document_url, 600); // 600 secondes = 10 minutes
+
+    if (error || !data?.signedUrl) {
+      console.error('Erreur createSignedUrl', error);
+      notify({
+        type: 'error',
+        message:
+          "Impossible de générer l'aperçu de la carte d'identité.",
+      });
+      return;
+    }
+
+    window.open(data.signedUrl, '_blank');
   };
 
   const handleReviewProof = async (proof: PaymentProof, approve: boolean) => {
@@ -291,10 +319,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {u.full_name}
                     </p>
                     <button
-                      onClick={() =>
-                        u.id_document_url &&
-                        window.open(u.id_document_url, '_blank')
-                      }
+                      onClick={() => handleOpenIdDoc(u)}
                       className="mt-1 text-[9px] font-black text-indigo-400 uppercase underline"
                     >
                       Voir CNI ↗
@@ -302,7 +327,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="flex flex-row md:flex-row gap-3 md:gap-4 justify-end">
+                <div className="flex justify-end">
                   <button
                     onClick={() => handleApprove(u.id)}
                     className="px-8 py-3 bg-indigo-600 text-white text-[10px] font-black rounded-2xl hover:bg-indigo-700 shadow-xl"
