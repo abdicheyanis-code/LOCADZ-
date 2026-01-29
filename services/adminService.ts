@@ -1,16 +1,8 @@
-
 import { supabase } from '../supabaseClient';
 import { Booking, UserProfile } from '../types';
-import { authService } from './authService';
 
 export const adminService = {
-  _checkAdminPermission: () => {
-    const user = authService.getSession();
-    return user && user.role === 'ADMIN';
-  },
-
   getAllUsers: async (): Promise<UserProfile[]> => {
-    if (!adminService._checkAdminPermission()) return [];
     try {
       const { data, error } = await supabase
         .from('users')
@@ -24,7 +16,6 @@ export const adminService = {
   },
 
   updateUserRole: async (userId: string, role: string): Promise<boolean> => {
-    if (!adminService._checkAdminPermission()) return false;
     try {
       const { error } = await supabase
         .from('users')
@@ -37,10 +28,6 @@ export const adminService = {
   },
 
   getPlatformStats: async () => {
-    if (!adminService._checkAdminPermission()) {
-      throw new Error("Accès non autorisé.");
-    }
-
     try {
       const { data: bookings, error } = await supabase
         .from('bookings')
@@ -49,22 +36,35 @@ export const adminService = {
 
       if (error) throw error;
 
-      const totalVolume = bookings?.reduce((sum, b) => sum + Number(b.total_price), 0) || 0;
-      const totalCommission = bookings?.reduce((sum, b) => sum + Number(b.commission_fee), 0) || 0;
+      const totalVolume =
+        bookings?.reduce(
+          (sum, b: any) => sum + Number(b.total_price),
+          0
+        ) || 0;
+      const totalCommission =
+        bookings?.reduce(
+          (sum, b: any) => sum + Number(b.commission_fee),
+          0
+        ) || 0;
 
       return {
         totalVolume,
         totalCommission,
         count: bookings?.length || 0,
-        bookings: (bookings as Booking[]) || []
+        bookings: (bookings as Booking[]) || [],
       };
     } catch (e: any) {
-      return { totalVolume: 0, totalCommission: 0, count: 0, bookings: [], error: e.message };
+      return {
+        totalVolume: 0,
+        totalCommission: 0,
+        count: 0,
+        bookings: [],
+        error: e.message,
+      };
     }
   },
 
   getPendingVerifications: async () => {
-    if (!adminService._checkAdminPermission()) return [];
     try {
       const { data, error } = await supabase
         .from('users')
@@ -78,7 +78,6 @@ export const adminService = {
   },
 
   approveHost: async (userId: string) => {
-    if (!adminService._checkAdminPermission()) return false;
     try {
       const { error } = await supabase
         .from('users')
@@ -88,5 +87,5 @@ export const adminService = {
     } catch (e) {
       return false;
     }
-  }
+  },
 };
