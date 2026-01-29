@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Sparkles, X } from 'lucide-react';
 import { GeminiAssistant } from './GeminiAssistant';
 
 type Props = {
@@ -21,8 +22,7 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
                    text-white"
         aria-label="Assistant DZ"
       >
-        {/* Icône remplacée par un simple emoji */}
-        <span className="text-xl">💬</span>
+        <Sparkles size={20} />
       </button>
 
       {/* OVERLAY */}
@@ -52,10 +52,8 @@ export const FloatingAssistant: React.FC<Props> = ({ currentProperty }) => {
             <button
               onClick={() => setOpen(false)}
               className="p-1 rounded-full hover:bg-white/10 transition"
-              aria-label="Fermer l’assistant"
             >
-              {/* X remplacé par un simple texte */}
-              <span className="text-lg leading-none">✕</span>
+              <X size={18} />
             </button>
           </div>
 
