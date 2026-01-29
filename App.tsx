@@ -134,13 +134,16 @@ const App: React.FC = () => {
       setIsLoading(true);
 
       try {
+        // On essaye d'abord de rafraîchir la session directement depuis Supabase
         const freshProfile = await authService.refreshSession();
 
         if (freshProfile) {
+          // L'utilisateur est encore connecté côté Supabase
           setCurrentUser(freshProfile);
           setUserRole(freshProfile.role);
           setDbStatus('CONNECTED');
         } else {
+          // Pas de session Supabase → on considère l'utilisateur déconnecté
           setCurrentUser(null);
           setUserRole('TRAVELER');
           setShowWelcome(true);
@@ -150,6 +153,7 @@ const App: React.FC = () => {
       } catch (e) {
         console.warn('Impossible de rafraîchir la session depuis Supabase.', e);
 
+        // Backend KO → on ne fait plus confiance au cache local
         setCurrentUser(null);
         setUserRole('TRAVELER');
         setShowWelcome(true);
@@ -301,93 +305,4 @@ const App: React.FC = () => {
       </div>
 
       {/* APP SHELL */}
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {!currentUser ? (
-          <AuthLanding
-            language={language}
-            onLanguageChange={setLanguage}
-            onOpenAuth={() => setIsAuthOpen(true)}
-            translations={t}
-          />
-        ) : showWelcome ? (
-          <WelcomeScreen
-            currentUser={currentUser}
-            currentRole={userRole}
-            onSelectRole={role => {
-              setUserRole(role);
-              handleNavigate(
-                role === 'HOST' ? 'HOST_DASH' : 'EXPLORE',
-                true
-              );
-            }}
-            onNavigate={view =>
-              handleNavigate(view as ActiveView, true)
-            }
-            language={language}
-            translations={t}
-          />
-        ) : (
-          <>
-            <Navbar
-              userRole={userRole}
-              currentUser={currentUser}
-              language={language}
-              onLanguageChange={setLanguage}
-              onSearch={async q => {
-                const m = await parseSmartSearch(
-                  q,
-                  CATEGORIES.map(c => c.id)
-                );
-                if (m) setSelectedCategory(m);
-              }}
-              onSwitchRole={() => {
-                const nr =
-                  userRole === 'TRAVELER' ? 'HOST' : 'TRAVELER';
-                setUserRole(nr);
-                handleNavigate(
-                  nr === 'HOST' ? 'HOST_DASH' : 'EXPLORE',
-                  true
-                );
-              }}
-              onOpenAuth={() => setIsAuthOpen(true)}
-              onLogout={() => {
-                authService.logout();
-                setCurrentUser(null);
-                setShowWelcome(true);
-                navigate('/');
-              }}
-              onGoHome={() => {
-                setShowWelcome(true);
-                navigate('/');
-              }}
-              onNavigate={v =>
-                handleNavigate(v as ActiveView, true)
-              }
-              accentColor={ambientColor}
-              dbStatus={dbStatus}
-            />
-
-            <main className="flex-1 transition-all duration-1000 pt-32 pb-40">
-              {activeView === 'EXPLORE' && (
-                <div className="space-y-16 animate-in fade-in slide-in-from-bottom-20 duration-1000">
-                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
-                    <div className="flex flex-col gap-2 animate-in slide-in-from-left duration-[1200ms]">
-                      <div className="flex items-center gap-6">
-                        <div
-                          className="h-[1px] w-16 opacity-30"
-                          style={{ backgroundColor: ambientColor }}
-                        ></div>
-                        <span
-                          className="text-[10px] font-black uppercase tracking-[0.8em] transition-colors duration-1000"
-                          style={{ color: ambientColor }}
-                        >
-                          LOCADZ DZ COLLECTION
-                        </span>
-                      </div>
-                      <h1 className="text-6xl md:text-[10rem] font-black italic tracking-tighter leading-[0.8] uppercase select-none">
-                        {activeCategory.label}
-                        <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/40 to-transparent">
-                          Signature
-                        </span>
-                      </h1>
+      <div className="relative z-10 flex flex-col 
