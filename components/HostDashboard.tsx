@@ -1,5 +1,12 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Property, UserProfile, Payout, Booking, BookingStatus, PayoutRecord } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Property,
+  UserProfile,
+  Payout,
+  Booking,
+  BookingStatus,
+  PayoutRecord,
+} from '../types';
 import { bookingService } from '../services/bookingService';
 import { propertyService } from '../services/propertyService';
 import { authService } from '../services/authService';
@@ -15,18 +22,35 @@ interface HostDashboardProps {
   onRefresh: () => void;
 }
 
-// Mock Payout Records (Historique des virements de LOCADZ vers l'hôte)
 const MOCK_PAYOUT_HISTORY: PayoutRecord[] = [
-  { id: 'PAY-8821', amount: 45000, date: '2024-03-15', method: 'CCP', status: 'COMPLETED' },
-  { id: 'PAY-8754', amount: 28000, date: '2024-03-01', method: 'RIB', status: 'COMPLETED' },
-  { id: 'PAY-8901', amount: 12500, date: '2024-03-22', method: 'CCP', status: 'PROCESSING' }
+  {
+    id: 'PAY-8821',
+    amount: 45000,
+    date: '2024-03-15',
+    method: 'CCP',
+    status: 'COMPLETED',
+  },
+  {
+    id: 'PAY-8754',
+    amount: 28000,
+    date: '2024-03-01',
+    method: 'RIB',
+    status: 'COMPLETED',
+  },
+  {
+    id: 'PAY-8901',
+    amount: 12500,
+    date: '2024-03-22',
+    method: 'CCP',
+    status: 'PROCESSING',
+  },
 ];
 
 const PropertyCalendar: React.FC<{ propertyId: string }> = ({ propertyId }) => {
   const now = new Date();
   const currentMonth = now.toLocaleString('fr-FR', { month: 'long' });
   const year = now.getFullYear();
-  
+
   const [bookedDays, setBookedDays] = useState<number[]>([]);
 
   useEffect(() => {
@@ -240,7 +264,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         </div>
       )}
 
-      {/* On n'empêche plus le scroll ni les clics, on met juste une légère opacité */}
+      {/* Demandes en attente */}
       <div className={`mb-12 ${!isVerified ? 'opacity-80' : ''}`}>
         <div className="flex items-center justify-between mb-8">
           <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">
@@ -264,9 +288,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                       {req.property_title}
                     </span>
                     <span className="text-[9px] font-black text-gray-300 uppercase">
-                      {new Date(
-                        req.created_at
-                      ).toLocaleDateString()}
+                      {new Date(req.created_at).toLocaleDateString()}
                     </span>
                   </div>
                   <div>
@@ -341,7 +363,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         )}
       </div>
 
-      <div className={`flex flex-col lg:flex-row gap-8 mb-12 ${!isVerified ? 'opacity-80' : ''}`}>
+      {/* Bloc revenu + config payout */}
+      <div
+        className={`flex flex-col lg:flex-row gap-8 mb-12 ${
+          !isVerified ? 'opacity-80' : ''
+        }`}
+      >
         <div className="lg:w-1/3 space-y-8">
           <div className="bg-white/20 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/40 shadow-2xl relative overflow-hidden group">
             <p className="text-[10px] font-black uppercase tracking-widest text-white/60 mb-2">
@@ -507,7 +534,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                         }
                         className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl font-bold text-indigo-950 outline-none focus:border-indigo-600 transition-all text-sm appearance-none"
                       >
-                        <option value="">Sélectionnez votre banque</option>
+                        <option value="">
+                          Sélectionnez votre banque
+                        </option>
                         {ALGERIAN_BANKS.map(bank => (
                           <option key={bank.id} value={bank.id}>
                             {bank.name}
@@ -565,7 +594,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       </div>
 
       {/* Historique des versements */}
-      <div className={`mb-12 ${!isVerified ? 'opacity-80' : ''}`}>
+      <div className={`${!isVerified ? 'opacity-80' : ''} mb-12`}>
         <div className="flex items-center gap-4 mb-8">
           <h3 className="text-2xl font-black text-white uppercase tracking-tight italic">
             Historique des Versements
@@ -573,4 +602,176 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           <div className="h-[1px] flex-1 bg-white/10" />
         </div>
 
-        <div className="grid 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {MOCK_PAYOUT_HISTORY.map(record => (
+            <div
+              key={record.id}
+              className="bg-white/5 backdrop-blur-3xl border border-white/10 p-8 rounded-[2.5rem] flex flex-col justify-between hover:bg-white/10 transition-all group overflow-hidden relative"
+            >
+              <div className="absolute top-0 right-0 p-6 opacity-5 text-4xl group-hover:rotate-12 transition-transform select-none">
+                {record.method === 'CCP' ? '📮' : '🏦'}
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">
+                    {record.id}
+                  </span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
+                      record.status === 'COMPLETED'
+                        ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                        : 'bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse'
+                    }`}
+                  >
+                    {record.status === 'COMPLETED'
+                      ? 'Virement Effectué'
+                      : 'En Cours'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-3xl font-black text-white tracking-tighter italic">
+                    {formatCurrency(record.amount)}
+                  </p>
+                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mt-1">
+                    Transféré le{' '}
+                    {new Date(record.date).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">
+                  Via {record.method}
+                </span>
+                <svg
+                  className="w-4 h-4 text-white/20"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3"
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  />
+                </svg>
+              </div>
+            </div>
+          ))}
+          {MOCK_PAYOUT_HISTORY.length === 0 && (
+            <div className="col-span-full py-16 text-center border-2 border-dashed border-white/10 rounded-[2.5rem] opacity-20">
+              <p className="font-black uppercase tracking-[0.4em] text-[10px] text-white">
+                Aucun versement enregistré
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Propriétés */}
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${
+          !isVerified ? 'opacity-80' : ''
+        }`}
+      >
+        {myProperties.map(prop => (
+          <div
+            key={prop.id}
+            className="bg-white/95 backdrop-blur-xl p-8 rounded-[2.5rem] flex flex-col border border-white shadow-2xl transition-all group"
+          >
+            <div className="flex gap-6 items-start mb-6">
+              <img
+                src={prop.images[0]?.image_url}
+                className="w-28 h-28 rounded-3xl object-cover shadow-2xl"
+                alt={prop.title}
+              />
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <h4 className="font-black text-indigo-900 text-xl italic">
+                    {prop.title}
+                  </h4>
+                  <button
+                    onClick={() =>
+                      handleUpdatePrice(prop.id, prop.price)
+                    }
+                    className="text-indigo-600 hover:text-indigo-800 p-2 bg-indigo-50 rounded-xl transition-all hover:scale-110"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-wide mb-2">
+                  {prop.location}
+                </p>
+                <div className="bg-indigo-50 px-3 py-1.5 rounded-xl inline-flex items-center gap-2">
+                  <span className="text-[10px] font-black text-indigo-400 uppercase">
+                    Tarif:
+                  </span>
+                  <span className="text-sm font-black text-indigo-900">
+                    {formatCurrency(prop.price)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <PropertyCalendar propertyId={prop.id} />
+          </div>
+        ))}
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="border-4 border-dashed border-white/20 rounded-[2.5rem] flex flex-col items-center justify-center p-12 text-white hover:bg-white/10 hover:border-white/40 transition-all min-h-[300px] group"
+        >
+          <div className="w-16 h-16 rounded-3xl bg-white/20 flex items-center justify-center mb-6">
+            <svg
+              className="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="4"
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+              />
+            </svg>
+          </div>
+          <span className="font-black uppercase tracking-[0.3em] text-sm">
+            Ajouter DZ
+          </span>
+        </button>
+      </div>
+
+      {/* Modals */}
+      {currentUser && (
+        <IdVerificationModal
+          isOpen={isVerifModalOpen}
+          onClose={() => setIsVerifModalOpen(false)}
+          currentUser={currentUser}
+          onSuccess={updated => {
+            setCurrentUser(updated);
+            onRefresh();
+          }}
+        />
+      )}
+
+      <AddPropertyModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        hostId={hostId}
+        hostName={hostName}
+        onSuccess={loadDashboardData}
+      />
+    </div>
+  );
+};
