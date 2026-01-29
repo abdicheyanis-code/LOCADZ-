@@ -13,7 +13,7 @@ import { HostDashboard } from './components/HostDashboard';
 import { AboutUs } from './components/AboutUs';
 import { ProfileSettings } from './components/ProfileSettings';
 import { LegalPages } from './components/LegalPages';
-import { CATEGORIES, INITIAL_PROPERTIES } from './constants';
+import { CATEGORIES } from './constants';
 import { Property, UserRole, UserProfile, AppLanguage } from './types';
 import { authService } from './services/authService';
 import { propertyService } from './services/propertyService';
@@ -99,18 +99,20 @@ const App: React.FC = () => {
     }
   };
 
-  // Charger propriétés + favoris
+  // Charger propriétés + favoris (RÉEL UNIQUEMENT)
   const refreshData = async () => {
     const session = authService.getSession();
     setIsLoading(true);
     try {
       const props = await propertyService.getAll();
 
+      // On ne prend QUE ce qui vient de la base
+      setProperties(props || []);
+
       if (props && props.length > 0) {
-        setProperties(props);
         setDbStatus('CONNECTED');
       } else {
-        setProperties(INITIAL_PROPERTIES as any);
+        // DB vide ou pas de résultat : pas de fallback démo
         setDbStatus('ERROR');
       }
 
@@ -121,8 +123,10 @@ const App: React.FC = () => {
         setFavoriteIds(favs);
       }
     } catch (e) {
+      console.error('refreshData error', e);
       setDbStatus('ERROR');
-      setProperties(INITIAL_PROPERTIES as any);
+      // En cas d’erreur backend : pas de données de démo
+      setProperties([]);
     } finally {
       setIsLoading(false);
     }
@@ -409,7 +413,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
+                  <div className="px-6 md:px-20 max-w-[1600px] mx_auto">
                     <FilterBar
                       maxPrice={maxPrice}
                       setMaxPrice={setMaxPrice}
