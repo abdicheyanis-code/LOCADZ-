@@ -174,3 +174,66 @@ export const IdVerificationModal: React.FC<Props> = ({
                 >
                   📸 Scanner le verso
                   <input
+                    ref={versoInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => handleFile(e, 'verso')}
+                  />
+                </div>
+              ) : (
+                <img
+                  src={versoPreview}
+                  className="w-full aspect-video object-cover rounded-[2rem] border"
+                />
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-4 rounded-[2rem] border border-gray-200 text-gray-500 font-black uppercase tracking-[0.2em] text-[10px]"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
+                  className="flex-1 py-4 bg-indigo-600 disabled:opacity-40 text-white rounded-[2rem] font-black uppercase tracking-[0.2em]"
+                >
+                  Envoyer
+                </button>
+              </div>
+            </div>
+          )}
+
+          {stage === 'UPLOADING' && (
+            <div className="py-20 text-center font-black text-indigo-950">
+              Envoi sécurisé en cours...
+            </div>
+          )}
+
+          {stage === 'SUCCESS' && (
+            <div className="py-12 flex flex-col items-center text-center">
+              <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center text-white text-4xl mb-6">
+                ✓
+              </div>
+              <h2 className="text-3xl font-black text-indigo-950 mb-3">
+                Documents reçus
+              </h2>
+              <p className="text-gray-500 font-bold text-xs uppercase tracking-[0.2em] mb-8">
+                En attente de validation
+              </p>
+              <button
+                onClick={onClose}
+                className="w-full py-4 bg-indigo-950 text-white rounded-[2rem] font-black uppercase tracking-[0.2em]"
+              >
+                Terminer
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
