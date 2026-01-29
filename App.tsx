@@ -522,7 +522,7 @@ const App: React.FC = () => {
         onSuccess={handleAuthSuccess}
       />
 
-      <GeminiAssistant currentProperty={selectedProperty} />
+      
     </div>
   );
 };
