@@ -6,8 +6,7 @@ interface LegalPagesProps {
 }
 
 export const LegalPages: React.FC<LegalPagesProps> = ({ language }) => {
-  // Pour l’instant, on met le texte en français uniquement.
-  // Tu pourras l’adapter plus tard en EN/AR si tu veux.
+  // Pour l’instant, texte en français uniquement.
   return (
     <div className="mt-16 space-y-12">
       {/* Petit disclaimer */}
@@ -26,11 +25,20 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ language }) => {
               Éditeur du site
             </span>
             <br />
-            LOCADZ (plateforme de mise en relation voyageurs / hôtes).
+            LOCADZ – plateforme de mise en relation voyageurs / hôtes en Algérie.
             <br />
-            Statut : à compléter (auto-entrepreneur, société, etc.).
+            Statut : projet en cours de création (structure juridique en cours de définition).
             <br />
-            Email de contact : à compléter (ex : contact@locadz.com).
+            Responsable de la publication : équipe fondatrice LOCA DZ.
+            <br />
+            Email de contact :{' '}
+            <a
+              href="mailto:loca.dz@hotmail.com"
+              className="underline text-indigo-300 hover:text-indigo-200"
+            >
+              loca.dz@hotmail.com
+            </a>
+            .
           </p>
 
           <p>
@@ -60,7 +68,13 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ language }) => {
             <br />
             Pour toute question légale ou signalement de contenu, vous pouvez écrire à :
             <br />
-            &gt; Email : à compléter
+            &gt; Email :{' '}
+            <a
+              href="mailto:loca.dz@hotmail.com"
+              className="underline text-indigo-300 hover:text-indigo-200"
+            >
+              loca.dz@hotmail.com
+            </a>
           </p>
         </div>
       </section>
@@ -125,7 +139,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ language }) => {
             <br />
             Le voyageur est responsable :
             <br />- du respect des lieux occupés,
-            <br />- du bon déroulement de son séjour,
+            <br />- du bon déroulement son séjour,
             <br />- et de la communication sincère avec l’hôte.
           </p>
 
@@ -194,7 +208,7 @@ export const LegalPages: React.FC<LegalPagesProps> = ({ language }) => {
           </p>
 
           <p>
-            <span className="font-black uppercase text-[11px] text-white/60">
+            <span className="font-black uppercase text-[11px] text:white/60">
               2. Finalités
             </span>
             <br />
