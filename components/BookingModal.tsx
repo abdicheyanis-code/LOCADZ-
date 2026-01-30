@@ -1,8 +1,8 @@
-
 import React, { useState, useMemo } from 'react';
-import { Property, UserProfile, Booking } from '../types';
-import { calculatePricing, createStripeCheckout } from '../services/stripeService';
+import { Property, UserProfile } from '../types';
+import { calculatePricing } from '../services/stripeService'; // on garde juste le calcul
 import { bookingService } from '../services/bookingService';
+import type { PaymentMethod } from '../types';
 
 interface BookingModalProps {
   property: Property;
@@ -13,21 +13,24 @@ interface BookingModalProps {
   onBookingSuccess: () => void;
 }
 
-type BookingStep = 'DETAILS' | 'PAYMENT' | 'SUCCESS';
+type BookingStep = 'DETAILS' | 'SUCCESS';
 
-export const BookingModal: React.FC<BookingModalProps> = ({ 
-  property, 
-  isOpen, 
+export const BookingModal: React.FC<BookingModalProps> = ({
+  property,
+  isOpen,
   currentUser,
   onClose,
   onOpenAuth,
-  onBookingSuccess
+  onBookingSuccess,
 }) => {
   const [step, setStep] = useState<BookingStep>('DETAILS');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // On limite volontairement les modes à BARIDIMOB / RIB (pas de ON_ARRIVAL)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BARIDIMOB');
 
   const nights = useMemo(() => {
     if (!startDate || !endDate) return 0;
@@ -39,155 +42,341 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   }, [startDate, endDate]);
 
   const pricing = calculatePricing(property.price, nights || 1);
+  const basePrice = property.price * (nights || 1);
+  const serviceFeeClient = pricing.commission; // 8 % service client
+  const hostCommission = Math.round(basePrice * 0.1); // 10 % prise sur l'hôte
+  const payoutHost = basePrice - hostCommission;
 
-  const handleStartPayment = async () => {
+  const handleStartBooking = async () => {
+    setError(null);
+
     if (!startDate || !endDate || nights <= 0) {
-      setError("Veuillez sélectionner des dates valides.");
+      setError('Veuillez sélectionner des dates valides.');
       return;
     }
 
-    if (!bookingService.isRangeAvailable(property.id, new Date(startDate), new Date(endDate))) {
-      setError("Désolé, ces dates ne sont plus disponibles.");
+    if (!currentUser) {
+      setError('Vous devez être connecté pour réserver.');
+      onOpenAuth();
       return;
     }
 
     setIsProcessing(true);
-    setError(null);
 
-    const stripeResult = await createStripeCheckout(property.id, pricing);
-    
-    if (stripeResult.success) {
-      // Fix: Removed commission_fee as it is handled by the service internally to match Omit type definition
+    try {
+      // Vérifier la disponibilité (ATTENTION: fonction async → await)
+      const isAvailable = await bookingService.isRangeAvailable(
+        property.id,
+        new Date(startDate),
+        new Date(endDate)
+      );
+
+      if (!isAvailable) {
+        setError('Désolé, ces dates ne sont plus disponibles.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Créer la réservation en statut PENDING_APPROVAL, avec les bons montants
       const newBooking = await bookingService.createBooking({
         property_id: property.id,
-        traveler_id: currentUser?.id || 'guest_user',
+        traveler_id: currentUser.id,
         start_date: startDate,
         end_date: endDate,
         total_price: pricing.total,
-        payment_method: 'ON_ARRIVAL',
-        payment_id: stripeResult.transactionId
+        base_price: basePrice,
+        service_fee_client: serviceFeeClient,
+        host_commission: hostCommission,
+        payout_host: payoutHost,
+        payment_method: paymentMethod, // 'BARIDIMOB' ou 'RIB'
       });
 
-      if (newBooking) {
-        setStep('SUCCESS');
-        onBookingSuccess();
+      if (!newBooking) {
+        setError("Impossible de créer la réservation pour le moment.");
+        setIsProcessing(false);
+        return;
       }
-    } else {
-      setError("Le paiement a été refusé par la banque.");
+
+      // Succès : on affiche un écran de confirmation "demande envoyée"
+      setStep('SUCCESS');
+      onBookingSuccess();
+    } catch (e) {
+      console.error('handleStartBooking error:', e);
+      setError("Une erreur inattendue s'est produite.");
+    } finally {
+      setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
 
   if (!isOpen) return null;
 
+  const paymentLabel =
+    paymentMethod === 'BARIDIMOB'
+      ? 'BaridiMob / CCP'
+      : 'Virement bancaire (RIB)';
+
+  const paymentInstruction =
+    paymentMethod === 'BARIDIMOB'
+      ? "Vous avez choisi le paiement via BaridiMob / CCP. Après validation de l'hôte, vous pourrez effectuer le virement vers le compte LOCADZ et envoyer votre reçu depuis l'espace \"Mes voyages\"."
+      : "Vous avez choisi le virement bancaire (RIB). Après validation de l'hôte, vous pourrez effectuer le virement vers le compte LOCADZ et envoyer votre reçu depuis l'espace \"Mes voyages\".";
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-indigo-950/40 backdrop-blur-3xl animate-in fade-in duration-500 p-0 md:p-8">
       <div className="bg-white/95 backdrop-blur-md w-full max-w-6xl h-full md:h-auto md:max-h-[90vh] rounded-none md:rounded-[4rem] shadow-[0_50px_150px_rgba(0,0,0,0.4)] border-none md:border border-white/40 overflow-hidden flex flex-col md:flex-row relative">
-        
-        <button onClick={onClose} className="absolute top-8 right-8 z-50 bg-indigo-950/10 hover:bg-indigo-950/20 text-indigo-950 p-3 rounded-full backdrop-blur-xl transition-all active:scale-90">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>
+        <button
+          onClick={onClose}
+          className="absolute top-8 right-8 z-50 bg-indigo-950/10 hover:bg-indigo-950/20 text-indigo-950 p-3 rounded-full backdrop-blur-xl transition-all active:scale-90"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
         </button>
 
+        {/* VISUEL BIEN */}
         <div className="w-full md:w-3/5 h-64 md:h-auto relative overflow-hidden group">
-          <img src={property.images[0]?.image_url} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" alt={property.title} />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent"></div>
-          
+          <img
+            src={property.images[0]?.image_url}
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+            alt={property.title}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
+
           <div className="absolute bottom-12 left-12 text-white drop-shadow-2xl">
             <div className="flex gap-2 mb-4">
-                <span className="bg-indigo-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">Exclusivité LOCADZ</span>
-                <span className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/30">{property.category}</span>
+              <span className="bg-indigo-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                Exclusivité LOCADZ
+              </span>
+              <span className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/30">
+                {property.category}
+              </span>
             </div>
-            <h2 className="text-5xl font-black italic tracking-tighter mb-2">{property.title}</h2>
-            <p className="text-xl font-medium opacity-80">{property.location}</p>
+            <h2 className="text-5xl font-black italic tracking-tighter mb-2">
+              {property.title}
+            </h2>
+            <p className="text-xl font-medium opacity-80">
+              {property.location}
+            </p>
           </div>
         </div>
 
+        {/* CONTENU DROIT */}
         <div className="w-full md:w-2/5 flex flex-col p-10 bg-white relative overflow-y-auto no-scrollbar">
-          
           {step === 'DETAILS' && (
             <div className="space-y-8 animate-in slide-in-from-right duration-500">
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-6">À propos du séjour</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-6">
+                  À propos du séjour
+                </h3>
                 <p className="text-indigo-950 font-medium leading-relaxed italic text-lg">
-                   "{property.description || "Un lieu d'exception conçu pour les voyageurs en quête de sérénité et de luxe absolu."}"
+                  "
+                  {property.description ||
+                    "Un lieu d'exception conçu pour les voyageurs en quête de sérénité et de luxe absolu."}
+                  "
                 </p>
                 <div className="flex items-center gap-4 mt-8 pt-8 border-t border-indigo-50">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-xl shadow-inner">👤</div>
-                    <div>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hôte LOCADZ</p>
-                        <p className="font-bold text-indigo-900">{property.hostName}</p>
-                    </div>
+                  <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-xl shadow-inner">
+                    👤
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Hôte LOCADZ
+                    </p>
+                    <p className="font-bold text-indigo-900">
+                      {property.hostName || 'Hôte LOCADZ'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
+              {/* DATES */}
               <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">Planifier votre arrivée</h3>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">
+                  Planifier votre arrivée
+                </h3>
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-indigo-50/50 rounded-3xl border border-indigo-100">
-                        <label className="text-[9px] font-black text-indigo-300 uppercase block mb-2">Arrivée</label>
-                        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full bg-transparent font-bold text-indigo-950 outline-none" />
-                    </div>
-                    <div className="p-4 bg-indigo-50/50 rounded-3xl border border-indigo-100">
-                        <label className="text-[9px] font-black text-indigo-300 uppercase block mb-2">Départ</label>
-                        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full bg-transparent font-bold text-indigo-950 outline-none" />
-                    </div>
+                  <div className="p-4 bg-indigo-50/50 rounded-3xl border border-indigo-100">
+                    <label className="text-[9px] font-black text-indigo-300 uppercase block mb-2">
+                      Arrivée
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e => setStartDate(e.target.value)}
+                      className="w-full bg-transparent font-bold text-indigo-950 outline-none"
+                    />
+                  </div>
+                  <div className="p-4 bg-indigo-50/50 rounded-3xl border border-indigo-100">
+                    <label className="text-[9px] font-black text-indigo-300 uppercase block mb-2">
+                      Départ
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e => setEndDate(e.target.value)}
+                      className="w-full bg-transparent font-bold text-indigo-950 outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* MODE DE PAIEMENT */}
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-400">
+                  Mode de paiement
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('BARIDIMOB')}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      paymentMethod === 'BARIDIMOB'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg'
+                        : 'bg-indigo-50 text-indigo-900 border-indigo-100 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <span className="text-xl">📲</span>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+                        BaridiMob / CCP
+                      </p>
+                      <p className="text-[11px] opacity-80">
+                        Virement via application BaridiMob vers le compte
+                        LOCADZ
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('RIB')}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      paymentMethod === 'RIB'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg'
+                        : 'bg-indigo-50 text-indigo-900 border-indigo-100 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <span className="text-xl">🏦</span>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+                        Virement bancaire (RIB)
+                      </p>
+                      <p className="text-[11px] opacity-80">
+                        Virement classique vers le RIB bancaire LOCADZ
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* RÉCAP PRIX */}
               {nights > 0 && (
                 <div className="p-8 bg-gradient-to-br from-indigo-900 to-violet-900 rounded-[2.5rem] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
                   <div className="relative z-10 space-y-3">
                     <div className="flex justify-between text-[10px] font-black opacity-60 uppercase">
-                        <span>{nights} nuits x DA {property.price}</span>
-                        <span>DA {pricing.subtotal}</span>
+                      <span>
+                        {nights} nuits x DA {property.price}
+                      </span>
+                      <span>DA {pricing.subtotal}</span>
                     </div>
                     <div className="flex justify-between text-[10px] font-black opacity-60 uppercase">
-                        <span>Frais de service (8%)</span>
-                        <span>DA {pricing.commission.toFixed(0)}</span>
+                      <span>Frais de service (8%)</span>
+                      <span>DA {pricing.commission.toFixed(0)}</span>
                     </div>
                     <div className="h-[1px] bg-white/10 my-4" />
                     <div className="flex justify-between items-end">
-                        <span className="text-3xl font-black italic tracking-tighter">Total</span>
-                        <span className="text-4xl font-black">DA {pricing.total.toFixed(0)}</span>
+                      <span className="text-3xl font-black italic tracking-tighter">
+                        Total
+                      </span>
+                      <span className="text-4xl font-black">
+                        DA {pricing.total.toFixed(0)}
+                      </span>
                     </div>
                   </div>
                   <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/10 opacity-40 group-hover:animate-shine" />
                 </div>
               )}
 
-              {error && <p className="text-rose-500 text-[10px] font-black uppercase text-center">{error}</p>}
+              {error && (
+                <p className="text-rose-500 text-[10px] font-black uppercase text-center">
+                  {error}
+                </p>
+              )}
 
-              <button 
-                onClick={handleStartPayment}
+              <button
+                onClick={handleStartBooking}
                 disabled={isProcessing || nights <= 0}
                 className="w-full py-6 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
               >
                 {isProcessing ? (
                   <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></div>
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" />
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
                   </div>
-                ) : 'VÉRIFIER & RÉSERVER'}
+                ) : (
+                  'ENVOYER MA DEMANDE'
+                )}
               </button>
             </div>
           )}
 
           {step === 'SUCCESS' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-700">
-              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-200 mb-8 animate-bounce-slow">
-                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"/></svg>
+              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items:center justify-center shadow-2xl shadow-emerald-200 mb-8 animate-bounce-slow">
+                <svg
+                  className="w-12 h-12 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="4"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
               </div>
-              <h2 className="text-4xl font-black text-indigo-950 italic tracking-tighter mb-4">Voyage Confirmé</h2>
-              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-10 px-6 leading-loose">
-                Félicitations ! Votre demande de séjour à <span className="text-indigo-600">{property.location}</span> a été validée avec succès.
+              <h2 className="text-4xl font-black text-indigo-950 italic tracking-tighter mb-4">
+                Demande envoyée
+              </h2>
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-6 px-6 leading-loose">
+                Votre demande de séjour à{' '}
+                <span className="text-indigo-600">
+                  {property.location}
+                </span>{' '}
+                a été enregistrée. L&apos;hôte pourra l&apos;accepter ou la
+                refuser, puis vous pourrez finaliser le paiement via{' '}
+                <span className="text-indigo-600 font-extrabold">
+                  {paymentLabel}
+                </span>
+                .
               </p>
-              <div className="bg-indigo-50 p-6 rounded-3xl w-full text-left space-y-2 mb-10">
-                <p className="text-[9px] font-black text-indigo-300 uppercase">Référence</p>
-                <p className="text-sm font-bold text-indigo-900">#LCDZ-{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
+
+              <div className="bg-indigo-50 p-6 rounded-3xl w-full text-left space-y-2 mb-6">
+                <p className="text-[9px] font-black text-indigo-300 uppercase">
+                  Rappel paiement
+                </p>
+                <p className="text-xs text-indigo-900 leading-relaxed">
+                  {paymentInstruction}
+                </p>
               </div>
-              <button onClick={onClose} className="w-full py-5 border-2 border-indigo-600 text-indigo-600 rounded-full font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
-                VOIR MES VOYAGES
+
+              <button
+                onClick={onClose}
+                className="w-full py-5 border-2 border-indigo-600 text-indigo-600 rounded-full font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all"
+              >
+                Fermer
               </button>
             </div>
           )}
