@@ -1,4 +1,3 @@
-
 import { AppLanguage } from '../types';
 
 export const TRANSLATIONS: Record<AppLanguage, any> = {
@@ -23,7 +22,8 @@ export const TRANSLATIONS: Record<AppLanguage, any> = {
     authSub: "Pour découvrir notre collection exclusive et réserver vos séjours, une authentification est requise.",
     authBtn: "Entrer dans l'univers",
     privateAccess: "Accès Privé • Algérie",
-    securityVerify: "Sécurité Réseau Vérifiée par LOCADZ AI 3.0",
+    // AVANT : "Sécurité Réseau Vérifiée par LOCADZ AI 3.0"
+    securityVerify: "Connexion sécurisée (HTTPS) • Données hébergées dans le cloud",
     confirmPay: "Confirmer la réservation",
     payMethod: "Choisir le mode de paiement",
     payArrival: "Paiement à l'arrivée",
@@ -61,7 +61,8 @@ export const TRANSLATIONS: Record<AppLanguage, any> = {
     authSub: "Authentication is required to book exclusive stays.",
     authBtn: "Enter the universe",
     privateAccess: "Private Access • Algeria",
-    securityVerify: "Verified by LOCADZ AI 3.0",
+    // AVANT : "Verified by LOCADZ AI 3.0"
+    securityVerify: "Secure connection (HTTPS) • Cloud‑hosted data",
     confirmPay: "Confirm Reservation",
     payMethod: "Choose payment method",
     payArrival: "Payment on Arrival",
@@ -99,7 +100,8 @@ export const TRANSLATIONS: Record<AppLanguage, any> = {
     authSub: "لاكتشاف مجموعتنا الحصرية وحجز إقامتك، يلزم تسجيل الدخول.",
     authBtn: "دخول العالم",
     privateAccess: "دخول خاص • الجزائر",
-    securityVerify: "أمن الشبكة موثق بواسطة ذكاء لوكادز 3.0",
+    // AVANT : "أمن الشبكة موثق بواسطة ذكاء لوكادز 3.0"
+    securityVerify: "اتصال آمن (HTTPS) • بيانات مستضافة على السحابة",
     confirmPay: "تأكيد الحجز",
     payMethod: "اختر طريقة الدفع",
     payArrival: "الدفع عند الوصول",
