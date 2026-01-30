@@ -1,26 +1,11 @@
 import { supabase } from '../supabaseClient';
 import { Property, PropertyImage } from '../types';
-import { INITIAL_PROPERTIES } from '../constants';
-
-const LOCAL_PROPERTIES_KEY = 'locadz_local_properties';
-
-// true en dev, false en prod (Vercel)
-const USE_LOCAL_FALLBACK = import.meta.env.DEV;
 
 export const propertyService = {
-  _getLocal: (): Property[] => {
-    const saved = localStorage.getItem(LOCAL_PROPERTIES_KEY);
-    return saved ? JSON.parse(saved) : INITIAL_PROPERTIES;
-  },
-
-  _saveLocal: (props: Property[]) => {
-    localStorage.setItem(LOCAL_PROPERTIES_KEY, JSON.stringify(props));
-  },
-
   uploadImage: async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileName = `${crypto.randomUUID()}.${fileExt || 'jpg'}`;
       const filePath = `properties/${fileName}`;
 
       const { error: uploadError } = await supabase
@@ -30,16 +15,18 @@ export const propertyService = {
 
       if (uploadError) throw uploadError;
 
-      const { data } = supabase
+      const { data, error: urlError } = supabase
         .storage
         .from('property-images')
         .getPublicUrl(filePath);
 
+      if (urlError) throw urlError;
+
       return data.publicUrl;
     } catch (err) {
-      console.error('Upload error:', err);
-      // Fallback: simulation d’URL locale pour test
-      return URL.createObjectURL(file);
+      console.error('Upload image error:', err);
+      // Pas d’URL fake : on renvoie null si l’upload a échoué
+      return null;
     }
   },
 
@@ -51,48 +38,40 @@ export const propertyService = {
         .order('created_at', { ascending: false });
 
       if (error || !properties) {
-        return USE_LOCAL_FALLBACK ? propertyService._getLocal() : [];
+        console.error('getAll properties error:', error);
+        return [];
       }
 
       const propertyIds = properties.map(p => p.id);
-      const { data: images } = await supabase
+      if (propertyIds.length === 0) {
+        return [];
+      }
+
+      const { data: images, error: imgError } = await supabase
         .from('property_images')
         .select('*')
         .in('property_id', propertyIds);
 
+      if (imgError) {
+        console.error('getAll property_images error:', imgError);
+      }
+
       const imagesData = (images as PropertyImage[]) || [];
+
       return properties.map(p => ({
         ...p,
         images: imagesData.filter(img => img.property_id === p.id),
-      }));
+      })) as Property[];
     } catch (err) {
-      return USE_LOCAL_FALLBACK ? propertyService._getLocal() : [];
+      console.error('getAll unexpected error:', err);
+      return [];
     }
   },
 
   add: async (propertyData: any): Promise<Property | null> => {
-    const newProperty: Property = {
-      id: crypto.randomUUID(),
-      host_id: propertyData.host_id,
-      title: propertyData.title,
-      description: propertyData.description,
-      location: propertyData.location,
-      price: propertyData.price,
-      category: propertyData.category,
-      rating: 5.0,
-      reviews_count: 0,
-      latitude: propertyData.latitude || 36.7,
-      longitude: propertyData.longitude || 3.0,
-      created_at: new Date().toISOString(),
-      images: (propertyData.imageUrls || []).map((url: string) => ({
-        id: crypto.randomUUID(),
-        property_id: '',
-        image_url: url,
-        created_at: new Date().toISOString(),
-      })),
-      hostName: propertyData.hostName || 'Hôte Locadz',
-      isHostVerified: true,
-    };
+    // On définit des lat/lng par défaut si non fournis
+    const latitude = propertyData.latitude ?? 36.7;
+    const longitude = propertyData.longitude ?? 3.0;
 
     try {
       const { data, error } = await supabase
@@ -105,17 +84,17 @@ export const propertyService = {
             location: propertyData.location,
             price: propertyData.price,
             category: propertyData.category,
-            latitude: newProperty.latitude,
-            longitude: newProperty.longitude,
+            latitude,
+            longitude,
           },
         ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error || !data) throw error;
 
-      if (propertyData.imageUrls) {
-        await supabase
+      if (propertyData.imageUrls && propertyData.imageUrls.length > 0) {
+        const { error: imgError } = await supabase
           .from('property_images')
           .insert(
             propertyData.imageUrls.map((url: string) => ({
@@ -123,15 +102,16 @@ export const propertyService = {
               image_url: url,
             })),
           );
+
+        if (imgError) {
+          console.error('add property_images error:', imgError);
+        }
       }
 
       return await propertyService.getById(data.id);
     } catch (err) {
-      if (!USE_LOCAL_FALLBACK) return null;
-      const local = propertyService._getLocal();
-      const updated = [newProperty, ...local];
-      propertyService._saveLocal(updated);
-      return newProperty;
+      console.error('add property error:', err);
+      return null;
     }
   },
 
@@ -143,17 +123,27 @@ export const propertyService = {
         .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (error || !property) {
+        console.error('getById property error:', error);
+        return null;
+      }
 
-      const { data: images } = await supabase
+      const { data: images, error: imgError } = await supabase
         .from('property_images')
         .select('*')
         .eq('property_id', id);
 
-      return { ...(property as any), images: images || [] } as Property;
-    } catch {
-      if (!USE_LOCAL_FALLBACK) return null;
-      return propertyService._getLocal().find(p => p.id === id) || null;
+      if (imgError) {
+        console.error('getById images error:', imgError);
+      }
+
+      return {
+        ...(property as any),
+        images: (images as PropertyImage[]) || [],
+      } as Property;
+    } catch (err) {
+      console.error('getById unexpected error:', err);
+      return null;
     }
   },
 
@@ -164,11 +154,14 @@ export const propertyService = {
         .select('*')
         .eq('host_id', hostId);
 
-      if (error) throw error;
+      if (error || !data) {
+        console.error('getByHost error:', error);
+        return [];
+      }
       return data as Property[];
-    } catch {
-      if (!USE_LOCAL_FALLBACK) return [];
-      return propertyService._getLocal().filter(p => p.host_id === hostId);
+    } catch (err) {
+      console.error('getByHost unexpected error:', err);
+      return [];
     }
   },
 
@@ -181,15 +174,8 @@ export const propertyService = {
 
       if (error) throw error;
       return true;
-    } catch {
-      if (!USE_LOCAL_FALLBACK) return false;
-      const local = propertyService._getLocal();
-      const index = local.findIndex(p => p.id === id);
-      if (index !== -1) {
-        local[index] = { ...local[index], ...updates };
-        propertyService._saveLocal(local);
-        return true;
-      }
+    } catch (err) {
+      console.error('update property error:', err);
       return false;
     }
   },
