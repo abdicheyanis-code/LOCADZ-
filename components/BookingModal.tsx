@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Property, UserProfile } from '../types';
-import { calculatePricing } from '../services/stripeService'; // on garde juste le calcul
+import { calculatePricing } from '../services/stripeService';
 import { bookingService } from '../services/bookingService';
 import type { PaymentMethod } from '../types';
+import { PLATFORM_PAYOUT } from '../constants';
 
 interface BookingModalProps {
   property: Property;
@@ -29,7 +30,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // On limite volontairement les modes à BARIDIMOB / RIB (pas de ON_ARRIVAL)
+  // On limite les modes à BARIDIMOB / RIB (pas de ON_ARRIVAL)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BARIDIMOB');
 
   const nights = useMemo(() => {
@@ -43,8 +44,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
   const pricing = calculatePricing(property.price, nights || 1);
   const basePrice = property.price * (nights || 1);
-  const serviceFeeClient = pricing.commission; // 8 % service client
-  const hostCommission = Math.round(basePrice * 0.1); // 10 % prise sur l'hôte
+  const serviceFeeClient = pricing.commission; // 8 %
+  const hostCommission = Math.round(basePrice * 0.1); // 10 % plateforme côté hôte
   const payoutHost = basePrice - hostCommission;
 
   const handleStartBooking = async () => {
@@ -64,7 +65,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setIsProcessing(true);
 
     try {
-      // Vérifier la disponibilité (ATTENTION: fonction async → await)
+      // Vérifier la disponibilité
       const isAvailable = await bookingService.isRangeAvailable(
         property.id,
         new Date(startDate),
@@ -77,7 +78,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         return;
       }
 
-      // Créer la réservation en statut PENDING_APPROVAL, avec les bons montants
       const newBooking = await bookingService.createBooking({
         property_id: property.id,
         traveler_id: currentUser.id,
@@ -97,7 +97,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         return;
       }
 
-      // Succès : on affiche un écran de confirmation "demande envoyée"
       setStep('SUCCESS');
       onBookingSuccess();
     } catch (e) {
@@ -115,10 +114,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       ? 'BaridiMob / CCP'
       : 'Virement bancaire (RIB)';
 
-  const paymentInstruction =
-    paymentMethod === 'BARIDIMOB'
-      ? "Vous avez choisi le paiement via BaridiMob / CCP. Après validation de l'hôte, vous pourrez effectuer le virement vers le compte LOCADZ et envoyer votre reçu depuis l'espace \"Mes voyages\"."
-      : "Vous avez choisi le virement bancaire (RIB). Après validation de l'hôte, vous pourrez effectuer le virement vers le compte LOCADZ et envoyer votre reçu depuis l'espace \"Mes voyages\".";
+  const ccp = PLATFORM_PAYOUT.ccp;
+  const rib = PLATFORM_PAYOUT.rib;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-indigo-950/40 backdrop-blur-3xl animate-in fade-in duration-500 p-0 md:p-8">
@@ -146,7 +143,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         <div className="w-full md:w-3/5 h-64 md:h-auto relative overflow-hidden group">
           <img
             src={property.images[0]?.image_url}
-            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform durée-1000 group-hover:scale-110"
             alt={property.title}
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
@@ -250,8 +247,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         BaridiMob / CCP
                       </p>
                       <p className="text-[11px] opacity-80">
-                        Virement via application BaridiMob vers le compte
-                        LOCADZ
+                        Virement vers le CCP LOCADZ
                       </p>
                     </div>
                   </button>
@@ -271,7 +267,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         Virement bancaire (RIB)
                       </p>
                       <p className="text-[11px] opacity-80">
-                        Virement classique vers le RIB bancaire LOCADZ
+                        Virement vers le RIB bancaire LOCADZ
                       </p>
                     </div>
                   </button>
@@ -293,7 +289,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       <span>DA {pricing.commission.toFixed(0)}</span>
                     </div>
                     <div className="h-[1px] bg-white/10 my-4" />
-                    <div className="flex justify-between items-end">
+                    <div className="flex justify-between items:end">
                       <span className="text-3xl font-black italic tracking-tighter">
                         Total
                       </span>
@@ -319,9 +315,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               >
                 {isProcessing ? (
                   <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-bounce [animation-delay:0.4s]" />
+                    <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce" />
+                    <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce [animation-delay:0.2s]" />
+                    <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce [animation-delay:0.4s]" />
                   </div>
                 ) : (
                   'ENVOYER MA DEMANDE'
@@ -332,7 +328,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
           {step === 'SUCCESS' && (
             <div className="flex-1 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-700">
-              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items:center justify-center shadow-2xl shadow-emerald-200 mb-8 animate-bounce-slow">
+              <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-200 mb-8 animate-bounce-slow">
                 <svg
                   className="w-12 h-12 text-white"
                   fill="none"
@@ -350,26 +346,65 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               <h2 className="text-4xl font-black text-indigo-950 italic tracking-tighter mb-4">
                 Demande envoyée
               </h2>
-              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-6 px-6 leading-loose">
+              <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-4 px-6 leading-loose">
                 Votre demande de séjour à{' '}
                 <span className="text-indigo-600">
                   {property.location}
                 </span>{' '}
-                a été enregistrée. L&apos;hôte pourra l&apos;accepter ou la
-                refuser, puis vous pourrez finaliser le paiement via{' '}
+                a été enregistrée. Après validation de l&apos;hôte, vous
+                pourrez effectuer le paiement par{' '}
                 <span className="text-indigo-600 font-extrabold">
                   {paymentLabel}
                 </span>
                 .
               </p>
 
-              <div className="bg-indigo-50 p-6 rounded-3xl w-full text-left space-y-2 mb-6">
+              {/* Coordonnées de paiement LOCA DZ */}
+              <div className="bg-indigo-50 p-6 rounded-3xl w-full text-left space-y-3 mb-6">
                 <p className="text-[9px] font-black text-indigo-300 uppercase">
-                  Rappel paiement
+                  Coordonnées de paiement LOCA DZ
                 </p>
-                <p className="text-xs text-indigo-900 leading-relaxed">
-                  {paymentInstruction}
-                </p>
+
+                {paymentMethod === 'BARIDIMOB' && (
+                  <>
+                    <p className="text-xs text-indigo-900">
+                      <span className="font-black">Titulaire :</span>{' '}
+                      {ccp.accountName}
+                    </p>
+                    <p className="text-xs text-indigo-900">
+                      <span className="font-black">CCP / RIP :</span>{' '}
+                      {ccp.accountNumber}
+                    </p>
+                    <p className="text-[11px] text-indigo-800/70 mt-2">
+                      Effectuez un virement BaridiMob / CCP vers ce compte
+                      en indiquant votre nom et la référence de réservation
+                      dans le motif, puis envoyez le reçu dans l&apos;onglet
+                      &quot;Mes voyages&quot;.
+                    </p>
+                  </>
+                )}
+
+                {paymentMethod === 'RIB' && (
+                  <>
+                    <p className="text-xs text-indigo-900">
+                      <span className="font-black">Titulaire :</span>{' '}
+                      {rib.accountName}
+                    </p>
+                    <p className="text-xs text-indigo-900">
+                      <span className="font-black">Banque :</span>{' '}
+                      {rib.bankName}
+                    </p>
+                    <p className="text-xs text-indigo-900">
+                      <span className="font-black">RIB :</span>{' '}
+                      {rib.accountNumber}
+                    </p>
+                    <p className="text-[11px] text-indigo-800/70 mt-2">
+                      Effectuez un virement bancaire vers ce RIB, puis
+                      envoyez le reçu dans l&apos;onglet
+                      &quot;Mes voyages&quot;.
+                    </p>
+                  </>
+                )}
               </div>
 
               <button
