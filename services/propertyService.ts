@@ -25,7 +25,6 @@ export const propertyService = {
       return data.publicUrl;
     } catch (err) {
       console.error('Upload image error:', err);
-      // Si l'upload échoue, on ne renvoie pas d'URL
       return null;
     }
   },
@@ -67,10 +66,11 @@ export const propertyService = {
     }
   },
 
-  // Ajouter un bien
+  // Ajouter un bien (avec maps_url + latitude/longitude facultatifs)
   add: async (propertyData: any): Promise<Property | null> => {
     const latitude = propertyData.latitude ?? 36.7;
     const longitude = propertyData.longitude ?? 3.0;
+    const maps_url = propertyData.maps_url ?? null;
 
     try {
       const { data, error } = await supabase
@@ -85,6 +85,7 @@ export const propertyService = {
             category: propertyData.category,
             latitude,
             longitude,
+            maps_url, // ✅ on enregistre bien le lien Google Maps
           },
         ])
         .select()
@@ -185,7 +186,7 @@ export const propertyService = {
     }
   },
 
-  // Mise à jour d'un bien (prix, etc.)
+  // Mise à jour d'un bien (y compris maps_url + lat/lng)
   update: async (
     id: string,
     updates: Partial<Property>
@@ -207,7 +208,6 @@ export const propertyService = {
   // Suppression d'un bien + ses images + ses réservations
   remove: async (id: string): Promise<boolean> => {
     try {
-      // Supprimer d'abord les images liées
       const { error: imgError } = await supabase
         .from('property_images')
         .delete()
@@ -215,10 +215,8 @@ export const propertyService = {
 
       if (imgError) {
         console.error('delete property_images error:', imgError);
-        // on continue quand même, si la table est vide ce n’est pas bloquant
       }
 
-      // Supprimer les réservations liées (optionnel, selon ton modèle)
       const { error: bookingError } = await supabase
         .from('bookings')
         .delete()
@@ -226,10 +224,8 @@ export const propertyService = {
 
       if (bookingError) {
         console.error('delete bookings for property error:', bookingError);
-        // pareil, on continue : si pas de FK, ce n’est pas bloquant
       }
 
-      // Enfin, supprimer le bien lui-même
       const { error } = await supabase
         .from('properties')
         .delete()
