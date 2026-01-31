@@ -21,6 +21,7 @@ import { propertyService } from './services/propertyService';
 import { favoriteService } from './services/favoriteService';
 import { parseSmartSearch } from './services/geminiService';
 import { TRANSLATIONS } from './services/i18n';
+import { ResetPassword } from './components/ResetPassword';
 
 type ActiveView =
   | 'EXPLORE'
@@ -263,7 +264,23 @@ const App: React.FC = () => {
   }, [selectedCategory, properties, maxPrice, minRating]);
 
   if (!hasCheckedSession) return null;
-
+// Page spéciale : réinitialisation de mot de passe
+if (location.pathname === '/reset-password') {
+  return (
+    <div
+      className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
+      dir={language === 'ar' ? 'rtl' : 'ltr'}
+    >
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[#050505]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
+      </div>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <ResetPassword language={language} translations={t} />
+      </div>
+    </div>
+  );
+}
   return (
     <div
       className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
