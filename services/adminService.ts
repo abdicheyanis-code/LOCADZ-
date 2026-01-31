@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { Booking, UserProfile } from '../types';
+import { createNotification } from './notifications';
 
 export const adminService = {
   getAllUsers: async (): Promise<UserProfile[]> => {
@@ -79,12 +80,42 @@ export const adminService = {
 
   approveHost: async (userId: string) => {
     try {
+      // 1️⃣ On valide la vérification en DB
       const { error } = await supabase
         .from('users')
         .update({ id_verification_status: 'VERIFIED', is_verified: true })
         .eq('id', userId);
-      return !error;
+
+      if (error) throw error;
+
+      // 2️⃣ On récupère quelques infos sur l'utilisateur (optionnel)
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', userId)
+        .single();
+
+      // 3️⃣ 🔔 Notification pour l'hôte : identité vérifiée
+      if (!userError && user) {
+        try {
+          await createNotification({
+            recipientId: user.id,
+            type: 'verification_approved',
+            title: 'Votre identité a été vérifiée',
+            body:
+              'Votre compte hôte LOCA DZ est maintenant vérifié. ' +
+              'Vous pouvez profiter de toutes les fonctionnalités.',
+            data: {},
+          });
+        } catch (notifError) {
+          console.error('approveHost notification error', notifError);
+          // On ne bloque pas l’approve si la notif échoue
+        }
+      }
+
+      return true;
     } catch (e) {
+      console.error('approveHost error', e);
       return false;
     }
   },
