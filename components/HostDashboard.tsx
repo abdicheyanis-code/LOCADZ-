@@ -14,6 +14,7 @@ import { payoutsService } from '../services/payoutsService';
 import { formatCurrency } from '../services/stripeService';
 import { ALGERIAN_BANKS } from '../constants';
 import { AddPropertyModal } from './AddPropertyModal';
+import { EditPropertyModal } from './EditPropertyModal';
 import { IdVerificationModal } from './IdVerificationModal';
 
 interface HostDashboardProps {
@@ -120,6 +121,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [totalBookings, setTotalBookings] = useState(0);
 
   const [payoutHistory, setPayoutHistory] = useState<PayoutRecord[]>([]);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     const props = await propertyService.getByHost(hostId);
@@ -241,25 +243,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     } finally {
       setSaveStatus('SUCCESS');
       setTimeout(() => setSaveStatus('IDLE'), 3000);
-    }
-  };
-
-  const handleUpdatePrice = async (
-    propertyId: string,
-    currentPrice: number
-  ) => {
-    const newPrice = prompt(
-      `Modifier le tarif par nuit (Actuel: ${currentPrice} DA)`,
-      currentPrice.toString()
-    );
-    if (newPrice && !isNaN(parseInt(newPrice))) {
-      const success = await propertyService.update(propertyId, {
-        price: parseInt(newPrice),
-      });
-      if (success) {
-        loadDashboardData();
-        onRefresh();
-      }
     }
   };
 
@@ -750,11 +733,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                   </h4>
                   <div className="flex gap-2">
                     <button
-                      onClick={() =>
-                        handleUpdatePrice(prop.id, prop.price)
-                      }
+                      onClick={() => setEditingProperty(prop)}
                       className="text-indigo-600 hover:text-indigo-800 p-2 bg-indigo-50 rounded-xl transition-all hover:scale-110"
-                      title="Modifier le prix"
+                      title="Modifier l'annonce"
                     >
                       <svg
                         className="w-4 h-4"
@@ -766,7 +747,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth="3"
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                          d="M15.232 5.232l3.536 3.536M7 17h3l7.232-7.232a2.5 2.5 0 00-3.536-3.536L7 13v4z"
                         />
                       </svg>
                     </button>
@@ -853,6 +834,16 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         hostId={hostId}
         hostName={hostName}
         onSuccess={loadDashboardData}
+      />
+
+      <EditPropertyModal
+        isOpen={!!editingProperty}
+        onClose={() => setEditingProperty(null)}
+        property={editingProperty}
+        onSuccess={async () => {
+          await loadDashboardData();
+          onRefresh();
+        }}
       />
     </div>
   );
