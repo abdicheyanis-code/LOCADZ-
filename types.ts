@@ -1,8 +1,12 @@
-
 export type UserRole = 'TRAVELER' | 'HOST' | 'ADMIN';
 export type VerificationStatus = 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type AppLanguage = 'fr' | 'en' | 'ar';
-export type BookingStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'PAID' | 'CANCELLED' | 'REJECTED';
+export type BookingStatus =
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'PAID'
+  | 'CANCELLED'
+  | 'REJECTED';
 export type PaymentMethod = 'ON_ARRIVAL' | 'BARIDIMOB' | 'RIB';
 
 export interface Category {
@@ -43,6 +47,13 @@ export interface Message {
   sender_avatar?: string;
 }
 
+export interface PayoutDetails {
+  method: 'CCP' | 'RIB' | 'NONE';
+  accountName: string;
+  accountNumber: string;
+  bankName?: string;
+}
+
 export interface UserProfile {
   id: string;
   full_name: string;
@@ -58,14 +69,9 @@ export interface UserProfile {
   created_at: string;
 }
 
-export interface PayoutDetails {
-  method: 'CCP' | 'RIB' | 'NONE';
-  accountName: string;
-  accountNumber: string;
-  bankName?: string;
-}
-
-/* Added Payout interface for host bank account details and payment orchestration */
+/**
+ * Coordonnées bancaires d’un hôte (ancien système, encore utilisé dans certains écrans)
+ */
 export interface Payout {
   id: string;
   host_id: string;
@@ -76,7 +82,9 @@ export interface Payout {
   created_at: string;
 }
 
-/* Added PayoutRecord interface for historical payment tracking in host dashboard */
+/**
+ * Suivi des virements effectués vers les hôtes (HostDashboard)
+ */
 export interface PayoutRecord {
   id: string;
   amount: number;
@@ -85,6 +93,9 @@ export interface PayoutRecord {
   status: 'COMPLETED' | 'PROCESSING';
 }
 
+/**
+ * Preuve de paiement envoyée par un voyageur
+ */
 export interface PaymentProof {
   id: string;
   booking_id: string;
@@ -109,10 +120,14 @@ export interface Property {
   category: string;
   rating: number;
   reviews_count: number;
-  images: PropertyImage[]; 
+  images: PropertyImage[];
   created_at: string;
   latitude: number;
   longitude: number;
+
+  // Nouveau : lien Google Maps optionnel
+  maps_url?: string;
+
   amenities?: string[];
   isFavorite?: boolean;
   hostName?: string;
@@ -129,10 +144,10 @@ export interface Booking {
   // Prix total payé par le client (base + 8 %)
   total_price: number;
 
-  // Ancien champ, tu peux l'utiliser comme "revenu plateforme"
+  // Revenu plateforme total (8 % + 10 %)
   commission_fee: number;
 
-  // Nouveau modèle détaillé (optionnel tant que tu as des anciennes lignes)
+  // Nouveau modèle détaillé (optionnel pour rétrocompatibilité)
   base_price?: number;
   service_fee_client?: number;
   host_commission?: number;
@@ -146,9 +161,10 @@ export interface Booking {
   property_title?: string;
   traveler_name?: string;
 }
+
 export interface Favorite {
   id: string;
-  traveler_id: string; 
+  traveler_id: string;
   property_id: string;
   created_at: string;
 }
