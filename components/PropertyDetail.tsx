@@ -1,6 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Property, UserProfile, PaymentMethod, Payout, AppLanguage } from '../types';
-import { calculatePricing, createLocalPaymentSession, formatCurrency } from '../services/stripeService';
+import {
+  calculatePricing,
+  createLocalPaymentSession,
+  formatCurrency,
+} from '../services/stripeService';
 import { bookingService } from '../services/bookingService';
 import { payoutService } from '../services/payoutService';
 import { paymentService } from '../services/paymentService';
@@ -33,7 +37,8 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
   const mapRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
-    if (!mapContainerRef.current || !property.latitude || !property.longitude) return;
+    if (!mapContainerRef.current || !property.latitude || !property.longitude)
+      return;
 
     if (!mapRef.current) {
       mapRef.current = L.map(mapContainerRef.current).setView(
@@ -69,12 +74,27 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
 
   return (
     <div className="w-full h-[400px] md:h-[500px] animate-in fade-in zoom-in-95 duration-700">
-      <div ref={mapContainerRef} className="w-full h-full shadow-2xl border-4 border-white/50" />
-      <div className="mt-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center gap-3">
-        <span className="text-xl">📍</span>
-        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-900 leading-tight">
-          Emplacement approximatif • {property.location}
-        </p>
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full shadow-2xl border-4 border-white/50"
+      />
+      <div className="mt-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex flex-col md:flex-row items-center gap-3 justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-xl">📍</span>
+          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-900 leading-tight">
+            Emplacement approximatif • {property.location}
+          </p>
+        </div>
+        {property.maps_url && (
+          <a
+            href={property.maps_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-600 underline hover:text-indigo-800"
+          >
+            Voir sur Google Maps
+          </a>
+        )}
       </div>
     </div>
   );
@@ -93,7 +113,8 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const [currentImg, setCurrentImg] = useState(0);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('ON_ARRIVAL');
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>('ON_ARRIVAL');
   const [hostPayout, setHostPayout] = useState<Payout | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
 
@@ -130,98 +151,112 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const pricing = calculatePricing(property.price, nights || 1);
   const isRTL = language === 'ar';
   const { notify } = useNotification();
-  
+
   const handleBooking = async () => {
-  if (!currentUser) {
-    notify({ type: 'error', message: 'Veuillez vous connecter pour réserver.' });
-    return;
-  }
-  if (!startDate || !endDate || nights <= 0) {
-    notify({ type: 'error', message: 'Merci de sélectionner des dates valides.' });
-    return;
-  }
+    if (!currentUser) {
+      notify({
+        type: 'error',
+        message: 'Veuillez vous connecter pour réserver.',
+      });
+      return;
+    }
+    if (!startDate || !endDate || nights <= 0) {
+      notify({
+        type: 'error',
+        message: 'Merci de sélectionner des dates valides.',
+      });
+      return;
+    }
 
-  setStep('PROCESSING');
-  setIsBlocking(true);
+    setStep('PROCESSING');
+    setIsBlocking(true);
 
-  // Vérification de disponibilité
-  const isAvail = await bookingService.isRangeAvailable(
-    property.id,
-    new Date(startDate),
-    new Date(endDate)
-  );
+    // Vérification de disponibilité
+    const isAvail = await bookingService.isRangeAvailable(
+      property.id,
+      new Date(startDate),
+      new Date(endDate)
+    );
 
-  if (!isAvail) {
-    notify({
-      type: 'error',
-      message: "Désolé, ces dates viennent d'être bloquées par un autre voyageur.",
-    });
-    setStep('DATES');
-    setIsBlocking(false);
-    return;
-  }
+    if (!isAvail) {
+      notify({
+        type: 'error',
+        message:
+          "Désolé, ces dates viennent d'être bloquées par un autre voyageur.",
+      });
+      setStep('DATES');
+      setIsBlocking(false);
+      return;
+    }
 
-  // Simule une "session de paiement" locale
-  const result = await createLocalPaymentSession(property.id, pricing);
+    // Simule une "session de paiement" locale
+    const result = await createLocalPaymentSession(property.id, pricing);
 
-  if (result.success) {
-    const newBooking = await bookingService.createBooking({
-      property_id: property.id,
-      traveler_id: currentUser.id,
-      start_date: startDate,
-      end_date: endDate,
+    if (result.success) {
+      const newBooking = await bookingService.createBooking({
+        property_id: property.id,
+        traveler_id: currentUser.id,
+        start_date: startDate,
+        end_date: endDate,
 
-      // Nouveau modèle de pricing LOCADZ :
-      total_price: pricing.totalClient,              // ce que paie le client
-      base_price: pricing.base,                      // base (nuits × prix_nuit)
-      service_fee_client: pricing.serviceFeeClient,  // 8 % côté client
-      host_commission: pricing.hostCommission,       // 10 % pris sur l’hôte
-      payout_host: pricing.payoutHost,               // ce que tu dois verser à l’hôte
+        // Nouveau modèle de pricing LOCADZ :
+        total_price: pricing.totalClient, // ce que paie le client
+        base_price: pricing.base, // base (nuits × prix_nuit)
+        service_fee_client: pricing.serviceFeeClient, // 8 % côté client
+        host_commission: pricing.hostCommission, // 10 % pris sur l’hôte
+        payout_host: pricing.payoutHost, // ce que tu dois verser à l’hôte
 
-      payment_method: paymentMethod,
-      payment_id: result.transactionId,
-      receipt_url: undefined,
-    });
+        payment_method: paymentMethod,
+        payment_id: result.transactionId,
+        receipt_url: undefined,
+      });
 
-    if (newBooking) {
-      setLastBookingId(newBooking.id);
+      if (newBooking) {
+        setLastBookingId(newBooking.id);
 
-      if (paymentMethod === 'BARIDIMOB') {
-        setStep('UPLOAD_RECEIPT');
+        if (paymentMethod === 'BARIDIMOB') {
+          setStep('UPLOAD_RECEIPT');
+        } else {
+          notify({
+            type: 'success',
+            message: 'Demande de réservation envoyée.',
+          });
+          setStep('SUCCESS');
+          onBookingSuccess();
+        }
       } else {
-        notify({ type: 'success', message: 'Demande de réservation envoyée.' });
-        setStep('SUCCESS');
-        onBookingSuccess();
+        notify({
+          type: 'error',
+          message:
+            "Impossible de créer la réservation, veuillez réessayer.",
+        });
+        setStep('CONFIRMATION');
       }
     } else {
       notify({
         type: 'error',
-        message: "Impossible de créer la réservation, veuillez réessayer.",
+        message:
+          'La simulation de paiement a échoué, veuillez réessayer.',
       });
       setStep('CONFIRMATION');
     }
-  } else {
-    notify({
-      type: 'error',
-      message: "La simulation de paiement a échoué, veuillez réessayer.",
-    });
-    setStep('CONFIRMATION');
-  }
 
-  setIsBlocking(false);
-};
+    setIsBlocking(false);
+  };
 
   const handleUploadProof = async () => {
     if (!currentUser) {
-      setUploadError("Veuillez vous connecter pour envoyer une preuve.");
+      setUploadError('Veuillez vous connecter pour envoyer une preuve.');
       return;
     }
     if (!lastBookingId) {
-      setUploadError("Aucune réservation associée trouvée.");
+      setUploadError('Aucune réservation associée trouvée.');
       return;
     }
     if (!proofFile) {
-      setUploadError("Merci de sélectionner un fichier (image ou PDF).");
+      setUploadError(
+        'Merci de sélectionner un fichier (image ou PDF).'
+      );
       return;
     }
 
@@ -241,7 +276,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
 
     if (error || !proofId) {
       console.error('Upload proof error:', error);
-      setUploadError("Erreur lors de l'envoi de la preuve. Merci de réessayer.");
+      setUploadError(
+        "Erreur lors de l'envoi de la preuve. Merci de réessayer."
+      );
       return;
     }
 
@@ -273,13 +310,20 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         >
           <svg
             className={`w-6 h-6 transition-transform ${
-              isRTL ? 'group-hover:translate-x-1' : 'group-hover:-translate-x-1'
+              isRTL
+                ? 'group-hover:translate-x-1'
+                : 'group-hover:-translate-x-1'
             } ${isRTL ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="3"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
           </svg>
         </button>
 
@@ -316,12 +360,16 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         {/* Panneau droit */}
         <div className="w-full md:w-[40%] flex flex-col bg-white overflow-y-auto no-scrollbar relative">
           <div className="p-8 md:p-12 space-y-8 flex-1">
-            {(step === 'OVERVIEW' || step === 'REVIEWS' || step === 'MAP') && (
+            {(step === 'OVERVIEW' ||
+              step === 'REVIEWS' ||
+              step === 'MAP') && (
               <div className="flex bg-gray-100 p-1.5 rounded-2xl mb-4">
                 <button
                   onClick={() => setStep('OVERVIEW')}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    step === 'OVERVIEW' ? 'bg-white shadow-lg text-indigo-600' : 'text-gray-400'
+                    step === 'OVERVIEW'
+                      ? 'bg-white shadow-lg text-indigo-600'
+                      : 'text-gray-400'
                   }`}
                 >
                   Détails
@@ -329,7 +377,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                 <button
                   onClick={() => setStep('MAP')}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    step === 'MAP' ? 'bg-white shadow-lg text-indigo-600' : 'text-gray-400'
+                    step === 'MAP'
+                      ? 'bg-white shadow-lg text-indigo-600'
+                      : 'text-gray-400'
                   }`}
                 >
                   Carte
@@ -337,7 +387,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                 <button
                   onClick={() => setStep('REVIEWS')}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                    step === 'REVIEWS' ? 'bg-white shadow-lg text-indigo-600' : 'text-gray-400'
+                    step === 'REVIEWS'
+                      ? 'bg-white shadow-lg text-indigo-600'
+                      : 'text-gray-400'
                   }`}
                 >
                   Avis
@@ -348,7 +400,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
             {step === 'OVERVIEW' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-10">
                 <p className="text-indigo-950 font-medium italic text-2xl leading-relaxed">
-                  "{property.description}"
+                  &quot;{property.description}&quot;
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-indigo-50/50 p-6 rounded-[2.5rem] border border-indigo-100/50 shadow-inner group">
@@ -419,7 +471,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                       <span>
                         {nights} nuits x {formatCurrency(property.price)}
                       </span>
-                      <span>{formatCurrency(nights * property.price)}</span>
+                      <span>
+                        {formatCurrency(nights * property.price)}
+                      </span>
                     </div>
                     <div className="flex justify-between text-[10px] font-black opacity-50 uppercase">
                       <span>Frais de service (8%)</span>
@@ -510,7 +564,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                         BaridiMob
                       </span>
                       <span className="text-[9px] font-bold text-gray-400 leading-none">
-                        {hostPayout ? 'Virement Algérie Poste' : 'Non configuré'}
+                        {hostPayout
+                          ? 'Virement Algérie Poste'
+                          : 'Non configuré'}
                       </span>
                     </div>
                   </button>
@@ -550,7 +606,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                         {hostPayout.method} • {hostPayout.account_number}
                       </p>
                       {hostPayout.bank_name && (
-                        <p className="text-gray-600">{hostPayout.bank_name}</p>
+                        <p className="text-gray-600">
+                          {hostPayout.bank_name}
+                        </p>
                       )}
                     </>
                   ) : (
@@ -559,8 +617,8 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     </p>
                   )}
                   <p className="text-gray-500 mt-2">
-                    Merci de payer via BaridiMob / CCP, puis d&apos;uploader un reçu
-                    (capture écran ou PDF).
+                    Merci de payer via BaridiMob / CCP, puis d&apos;uploader un
+                    reçu (capture écran ou PDF).
                   </p>
                 </div>
 
@@ -634,8 +692,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                 </h2>
                 <p className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-12 px-8 leading-relaxed">
                   L&apos;hôte a été notifié. Il a{' '}
-                  <span className="text-indigo-600">24 heures</span> pour accepter ou
-                  refuser votre demande. Vous recevrez une notification.
+                  <span className="text-indigo-600">24 heures</span> pour
+                  accepter ou refuser votre demande. Vous recevrez une
+                  notification.
                 </p>
                 <button
                   onClick={onClose}
@@ -647,8 +706,12 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
             )}
 
             {step === 'MAP' && <PropertyMap property={property} />}
+
             {step === 'REVIEWS' && (
-              <ReviewSection propertyId={property.id} currentUser={currentUser} />
+              <ReviewSection
+                propertyId={property.id}
+                currentUser={currentUser}
+              />
             )}
           </div>
         </div>
