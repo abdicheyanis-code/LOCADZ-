@@ -168,3 +168,23 @@ export interface Favorite {
   property_id: string;
   created_at: string;
 }
+// -------------------- NOTIFICATIONS --------------------
+
+export type NotificationType =
+  | 'booking_created'
+  | 'booking_accepted'
+  | 'booking_rejected'
+  | 'verification_approved'
+  | 'verification_rejected';
+
+export interface Notification {
+  id: string;
+  recipient_id: string;
+  actor_id: string | null;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  data: Record<string, any>;
+  created_at: string; // ISO string
+  read_at: string | null;
+}
