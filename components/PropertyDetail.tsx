@@ -1,5 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Property, UserProfile, PaymentMethod, Payout, AppLanguage } from '../types';
+import {
+  Property,
+  UserProfile,
+  PaymentMethod,
+  Payout,
+  AppLanguage,
+} from '../types';
 import {
   calculatePricing,
   createLocalPaymentSession,
@@ -73,28 +79,27 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
   }, [property]);
 
   return (
-    <div className="w-full h-[400px] md:h-[500px] animate-in fade-in zoom-in-95 duration-700">
-      <div
-        ref={mapContainerRef}
-        className="w-full h-full shadow-2xl border-4 border-white/50"
-      />
-      <div className="mt-4 p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex flex-col md:flex-row items-center gap-3 justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xl">📍</span>
-          <p className="text-[10px] font-black uppercase tracking-widest text-indigo-900 leading-tight">
-            Emplacement approximatif • {property.location}
-          </p>
-        </div>
+    <div className="w-full animate-in fade-in zoom-in-95 duration-700">
+      {/* Barre au-dessus de la carte avec le bouton */}
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-[10px] font-black uppercase tracking-widest text-white/50">
+          Emplacement approximatif • {property.location}
+        </p>
         {property.maps_url && (
           <a
             href={property.maps_url}
             target="_blank"
             rel="noreferrer"
-            className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-600 underline hover:text-indigo-800"
+            className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-300 underline hover:text-indigo-100"
           >
-            Voir sur Google Maps
+            Ouvrir dans Google Maps
           </a>
         )}
+      </div>
+
+      {/* Carte */}
+      <div className="h-[400px] md:h-[500px] shadow-2xl border-4 border-white/50 rounded-3xl overflow-hidden">
+        <div ref={mapContainerRef} className="w-full h-full" />
       </div>
     </div>
   );
@@ -654,7 +659,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                 <button
                   onClick={handleUploadProof}
                   disabled={isBlocking || !proofFile}
-                  className="w-full py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40"
+                  className="w-full py-4 bg-indigo-600 text:white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40"
                 >
                   ENVOYER LA PREUVE
                 </button>
