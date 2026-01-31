@@ -25,11 +25,12 @@ export const propertyService = {
       return data.publicUrl;
     } catch (err) {
       console.error('Upload image error:', err);
-      // Pas d’URL fake : on renvoie null si l’upload a échoué
+      // Pas d’URL fake : si l’upload échoue, on renvoie null
       return null;
     }
   },
 
+  // Toutes les propriétés (vue Explore)
   getAll: async (): Promise<Property[]> => {
     try {
       const { data: properties, error } = await supabase
@@ -43,9 +44,7 @@ export const propertyService = {
       }
 
       const propertyIds = properties.map(p => p.id);
-      if (propertyIds.length === 0) {
-        return [];
-      }
+      if (propertyIds.length === 0) return [];
 
       const { data: images, error: imgError } = await supabase
         .from('property_images')
@@ -68,8 +67,8 @@ export const propertyService = {
     }
   },
 
+  // Ajouter un bien
   add: async (propertyData: any): Promise<Property | null> => {
-    // On définit des lat/lng par défaut si non fournis
     const latitude = propertyData.latitude ?? 36.7;
     const longitude = propertyData.longitude ?? 3.0;
 
@@ -115,6 +114,7 @@ export const propertyService = {
     }
   },
 
+  // Détail d'un bien
   getById: async (id: string): Promise<Property | null> => {
     try {
       const { data: property, error } = await supabase
@@ -147,25 +147,49 @@ export const propertyService = {
     }
   },
 
+  // Propriétés d'un hôte (HostDashboard)
   getByHost: async (hostId: string): Promise<Property[]> => {
     try {
-      const { data, error } = await supabase
+      const { data: properties, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('host_id', hostId);
+        .eq('host_id', hostId)
+        .order('created_at', { ascending: false });
 
-      if (error || !data) {
+      if (error || !properties) {
         console.error('getByHost error:', error);
         return [];
       }
-      return data as Property[];
+
+      const propertyIds = properties.map(p => p.id);
+      if (propertyIds.length === 0) return [];
+
+      const { data: images, error: imgError } = await supabase
+        .from('property_images')
+        .select('*')
+        .in('property_id', propertyIds);
+
+      if (imgError) {
+        console.error('getByHost images error:', imgError);
+      }
+
+      const imagesData = (images as PropertyImage[]) || [];
+
+      return properties.map(p => ({
+        ...p,
+        images: imagesData.filter(img => img.property_id === p.id),
+      })) as Property[];
     } catch (err) {
       console.error('getByHost unexpected error:', err);
       return [];
     }
   },
 
-  update: async (id: string, updates: Partial<Property>): Promise<boolean> => {
+  // Mise à jour d'un bien (prix, etc.)
+  update: async (
+    id: string,
+    updates: Partial<Property>
+  ): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('properties')
