@@ -177,15 +177,15 @@ const App: React.FC = () => {
   const getAmbientColor = (catId: string) => {
     switch (catId) {
       case 'trending':
-        return '#ef4444';
+        return '#ef4444'; // rouge
       case 'beachfront':
-        return '#06b6d4';
+        return '#06b6d4'; // cyan
       case 'cabins':
-        return '#10b981';
+        return '#10b981'; // vert
       case 'sahara':
-        return '#f59e0b';
+        return '#f59e0b'; // orange
       default:
-        return '#6366f1';
+        return '#6366f1'; // indigo
     }
   };
 
@@ -290,8 +290,17 @@ const App: React.FC = () => {
     >
       {/* BACKGROUND */}
       <div className="fixed inset-0 -z-10">
-        {/* Couche 1 : grand gradient sombre bleu/violet */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
+        {/* Couche 1 : gradient sombre mais teinté par la catégorie */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `
+              radial-gradient(circle at 0% 0%, ${ambientColor}33, transparent 55%),
+              radial-gradient(circle at 100% 100%, ${ambientColor}44, transparent 55%),
+              linear-gradient(to bottom right, #020617, #020617, #020617)
+            `,
+          }}
+        />
 
         {/* Couche 2 : vidéo / image de catégorie, très subtile */}
         <div className="absolute inset-0 transition-opacity duration-[3000ms] ease-in-out mix-blend-screen">
