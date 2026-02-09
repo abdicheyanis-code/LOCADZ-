@@ -10,6 +10,7 @@ import {
   calculatePricing,
   createLocalPaymentSession,
   formatCurrency,
+  formatCurrencyEURFromDZD,
 } from '../services/stripeService';
 import { bookingService } from '../services/bookingService';
 import { payoutService } from '../services/payoutService';
@@ -117,7 +118,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // ✅ Par défaut : BARIDIMOB, plus de ON_ARRIVAL
+  // Par défaut : BARIDIMOB, plus de ON_ARRIVAL
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('BARIDIMOB');
 
@@ -202,6 +203,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         start_date: startDate,
         end_date: endDate,
 
+        // Nouveau modèle LOCADZ
         total_price: pricing.totalClient,
         base_price: pricing.base,
         service_fee_client: pricing.serviceFeeClient,
@@ -216,7 +218,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       if (newBooking) {
         setLastBookingId(newBooking.id);
 
-        // ✅ Pour BARIDIMOB, RIB, PAYPAL → étape upload du reçu
         if (
           paymentMethod === 'BARIDIMOB' ||
           paymentMethod === 'RIB' ||
@@ -491,9 +492,14 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                       <span className="text-2xl font-black italic tracking-tighter">
                         Total
                       </span>
-                      <span className="text-4xl font-black text-indigo-300">
-                        {formatCurrency(pricing.total)}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-4xl font-black text-indigo-300">
+                          {formatCurrency(pricing.total)}
+                        </span>
+                        <span className="text-[11px] text-indigo-200 mt-1">
+                          ≈ {formatCurrencyEURFromDZD(pricing.total)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
