@@ -1,9 +1,19 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Property, UserProfile } from '../types';
 import { calculatePricing } from '../services/stripeService';
 import { bookingService } from '../services/bookingService';
 import type { PaymentMethod } from '../types';
 import { PLATFORM_PAYOUT } from '../constants';
+
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
+// Client ID PayPal injecté par Vite (à configurer dans .env : VITE_PAYPAL_CLIENT_ID)
+const PAYPAL_CLIENT_ID = import.meta.env
+  .VITE_PAYPAL_CLIENT_ID as string | undefined;
 
 interface BookingModalProps {
   property: Property;
@@ -30,8 +40,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // On limite les modes à BARIDIMOB / RIB (pas de ON_ARRIVAL)
+  // Modes de paiement : BARIDIMOB / RIB / PAYPAL
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BARIDIMOB');
+
+  // État PayPal
+  const [paypalLoaded, setPaypalLoaded] = useState(false);
+  const [paypalError, setPaypalError] = useState<string | null>(null);
 
   const nights = useMemo(() => {
     if (!startDate || !endDate) return 0;
@@ -48,6 +62,143 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const hostCommission = Math.round(basePrice * 0.1); // 10 % plateforme côté hôte
   const payoutHost = basePrice - hostCommission;
 
+  // Chargement du script PayPal quand on ouvre le modal + PayPal choisi
+  useEffect(() => {
+    if (!isOpen || paymentMethod !== 'PAYPAL') return;
+
+    if (!PAYPAL_CLIENT_ID) {
+      setPaypalError("PayPal n'est pas encore configuré sur cette application.");
+      return;
+    }
+
+    setPaypalError(null);
+
+    // Script déjà chargé
+    if (window.paypal) {
+      setPaypalLoaded(true);
+      return;
+    }
+
+    // Script déjà présent dans le DOM
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[src^="https://www.paypal.com/sdk/js"]'
+    );
+    if (existing) {
+      existing.addEventListener('load', () => setPaypalLoaded(true));
+      return;
+    }
+
+    // Injecter le script PayPal
+    const script = document.createElement('script');
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR`;
+    script.async = true;
+    script.onload = () => setPaypalLoaded(true);
+    script.onerror = () =>
+      setPaypalError(
+        'Impossible de charger PayPal. Merci de réessayer plus tard.'
+      );
+    document.body.appendChild(script);
+  }, [isOpen, paymentMethod]);
+
+  // Rendu du bouton PayPal + gestion du paiement
+  useEffect(() => {
+    if (
+      !isOpen ||
+      paymentMethod !== 'PAYPAL' ||
+      !paypalLoaded ||
+      !window.paypal ||
+      !currentUser ||
+      nights <= 0
+    ) {
+      return;
+    }
+
+    const containerId = 'paypal-button-container';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    window.paypal
+      .Buttons({
+        createOrder: (_data: any, actions: any) => {
+          return actions.order.create({
+            purchase_units: [
+              {
+                amount: {
+                  // À adapter si tu passes tes prix en EUR au lieu de DA
+                  value: pricing.total.toFixed(2),
+                  currency_code: 'EUR',
+                },
+                description: `Réservation LOCA DZ - ${property.title}`,
+              },
+            ],
+          });
+        },
+        onApprove: async (_data: any, actions: any) => {
+          try {
+            setIsProcessing(true);
+            const details = await actions.order.capture();
+            const paypalOrderId = details.id as string;
+
+            const newBooking = await bookingService.createBooking({
+              property_id: property.id,
+              traveler_id: currentUser.id,
+              start_date: startDate,
+              end_date: endDate,
+              total_price: pricing.total,
+              base_price: basePrice,
+              service_fee_client: serviceFeeClient,
+              host_commission: hostCommission,
+              payout_host: payoutHost,
+              payment_method: 'PAYPAL',
+              payment_id: paypalOrderId,
+            });
+
+            if (!newBooking) {
+              setError(
+                "Le paiement PayPal a réussi mais la réservation n'a pas pu être créée. Contactez le support."
+              );
+              return;
+            }
+
+            setStep('SUCCESS');
+            onBookingSuccess();
+          } catch (err) {
+            console.error('PayPal onApprove error', err);
+            setError(
+              "Erreur lors de la finalisation de votre réservation PayPal. Aucun débit supplémentaire n'a été effectué."
+            );
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        onError: (err: any) => {
+          console.error('PayPal Buttons error', err);
+          setError(
+            'Erreur PayPal. Merci de réessayer ou de choisir un autre moyen de paiement.'
+          );
+        },
+      })
+      .render(`#${containerId}`);
+  }, [
+    isOpen,
+    paymentMethod,
+    paypalLoaded,
+    currentUser,
+    nights,
+    pricing.total,
+    property.id,
+    property.title,
+    startDate,
+    endDate,
+    basePrice,
+    serviceFeeClient,
+    hostCommission,
+    payoutHost,
+    onBookingSuccess,
+  ]);
+
   const handleStartBooking = async () => {
     setError(null);
 
@@ -59,6 +210,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     if (!currentUser) {
       setError('Vous devez être connecté pour réserver.');
       onOpenAuth();
+      return;
+    }
+
+    // Pour PayPal, on ne passe pas ici : on utilise le bouton PayPal.
+    if (paymentMethod === 'PAYPAL') {
+      setError('Utilisez le bouton PayPal ci-dessous pour finaliser votre demande.');
       return;
     }
 
@@ -112,14 +269,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const paymentLabel =
     paymentMethod === 'BARIDIMOB'
       ? 'BaridiMob / CCP'
-      : 'Virement bancaire (RIB)';
+      : paymentMethod === 'RIB'
+      ? 'Virement bancaire (RIB)'
+      : 'PayPal';
 
   const ccp = PLATFORM_PAYOUT.ccp;
   const rib = PLATFORM_PAYOUT.rib;
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-indigo-950/40 backdrop-blur-3xl animate-in fade-in duration-500 p-0 md:p-8">
-      <div className="bg-white/95 backdrop-blur-md w-full max-w-6xl h-full md:h-auto md:max-h-[90vh] rounded-none md:rounded-[4rem] shadow-[0_50px_150px_rgba(0,0,0,0.4)] border-none md:border border-white/40 overflow-hidden flex flex-col md:flex-row relative">
+      <div className="bg-white/95 backdrop-blur-md w-full max-w-6xl h-full md:h-auto md:max-h[90vh] rounded-none md:rounded-[4rem] shadow-[0_50px_150px_rgba(0,0,0,0.4)] border-none md:border border-white/40 overflow-hidden flex flex-col md:flex-row relative">
         <button
           onClick={onClose}
           className="absolute top-8 right-8 z-50 bg-indigo-950/10 hover:bg-indigo-950/20 text-indigo-950 p-3 rounded-full backdrop-blur-xl transition-all active:scale-90"
@@ -271,8 +430,65 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </p>
                     </div>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!currentUser) {
+                        setError(
+                          'Vous devez être connecté pour utiliser PayPal.'
+                        );
+                        onOpenAuth();
+                        return;
+                      }
+                      setPaymentMethod('PAYPAL');
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                      paymentMethod === 'PAYPAL'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg'
+                        : 'bg-indigo-50 text-indigo-900 border-indigo-100 hover:bg-indigo-100'
+                    }`}
+                  >
+                    <span className="text-xl">💳</span>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em]">
+                        PayPal (carte / compte)
+                      </p>
+                      <p className="text-[11px] opacity-80">
+                        Paiement sécurisé en ligne via PayPal
+                      </p>
+                    </div>
+                  </button>
                 </div>
               </div>
+
+              {/* Zone PayPal spécifique */}
+              {paymentMethod === 'PAYPAL' && (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-indigo-900">
+                    Vous allez régler le montant total via PayPal. Une fois le
+                    paiement effectué, votre demande de réservation sera
+                    envoyée à l&apos;hôte.
+                  </p>
+
+                  {paypalError && (
+                    <p className="text-[10px] font-black text-rose-500">
+                      {paypalError}
+                    </p>
+                  )}
+
+                  {!paypalError && (
+                    <div className="p-3 border border-indigo-100 rounded-2xl">
+                      <div id="paypal-button-container" />
+                      {!paypalLoaded && (
+                        <p className="text-[10px] text-gray-400 mt-2">
+                          Chargement de PayPal...
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* RÉCAP PRIX */}
               {nights > 0 && (
@@ -308,21 +524,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </p>
               )}
 
-              <button
-                onClick={handleStartBooking}
-                disabled={isProcessing || nights <= 0}
-                className="w-full py-6 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
-              >
-                {isProcessing ? (
-                  <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce" />
-                    <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce [animation-delay:0.4s]" />
-                  </div>
-                ) : (
-                  'ENVOYER MA DEMANDE'
-                )}
-              </button>
+              {/* Bouton principal : uniquement pour BARIDIMOB / RIB */}
+              {paymentMethod !== 'PAYPAL' && (
+                <button
+                  onClick={handleStartBooking}
+                  disabled={isProcessing || nights <= 0}
+                  className="w-full py-6 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  {isProcessing ? (
+                    <div className="flex gap-1">
+                      <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce" />
+                      <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce [animation-delay:0.2s]" />
+                      <div className="w-1.5 h-1.5 bg:white rounded-full animate-bounce [animation-delay:0.4s]" />
+                    </div>
+                  ) : (
+                    'ENVOYER MA DEMANDE'
+                  )}
+                </button>
+              )}
             </div>
           )}
 
@@ -347,65 +566,80 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 Demande envoyée
               </h2>
               <p className="text-gray-400 font-bold text-xs uppercase tracking-widest mb-4 px-6 leading-loose">
-                Votre demande de séjour à{' '}
-                <span className="text-indigo-600">
-                  {property.location}
-                </span>{' '}
-                a été enregistrée. Après validation de l&apos;hôte, vous
-                pourrez effectuer le paiement par{' '}
-                <span className="text-indigo-600 font-extrabold">
-                  {paymentLabel}
-                </span>
-                .
+                {paymentMethod === 'PAYPAL' ? (
+                  <>
+                    Votre demande de séjour à{' '}
+                    <span className="text-indigo-600">
+                      {property.location}
+                    </span>{' '}
+                    a été enregistrée et votre paiement PayPal a bien été pris
+                    en compte par LOCA DZ. L&apos;hôte doit maintenant valider
+                    votre réservation.
+                  </>
+                ) : (
+                  <>
+                    Votre demande de séjour à{' '}
+                    <span className="text-indigo-600">
+                      {property.location}
+                    </span>{' '}
+                    a été enregistrée. Après validation de l&apos;hôte, vous
+                    pourrez effectuer le paiement par{' '}
+                    <span className="text-indigo-600 font-extrabold">
+                      {paymentLabel}
+                    </span>
+                    .
+                  </>
+                )}
               </p>
 
-              {/* Coordonnées de paiement LOCA DZ */}
-              <div className="bg-indigo-50 p-6 rounded-3xl w-full text-left space-y-3 mb-6">
-                <p className="text-[9px] font-black text-indigo-300 uppercase">
-                  Coordonnées de paiement LOCA DZ
-                </p>
+              {/* Coordonnées de paiement LOCA DZ : uniquement pour BARIDIMOB / RIB */}
+              {paymentMethod !== 'PAYPAL' && (
+                <div className="bg-indigo-50 p-6 rounded-3xl w-full text-left space-y-3 mb-6">
+                  <p className="text-[9px] font-black text-indigo-300 uppercase">
+                    Coordonnées de paiement LOCA DZ
+                  </p>
 
-                {paymentMethod === 'BARIDIMOB' && (
-                  <>
-                    <p className="text-xs text-indigo-900">
-                      <span className="font-black">Titulaire :</span>{' '}
-                      {ccp.accountName}
-                    </p>
-                    <p className="text-xs text-indigo-900">
-                      <span className="font-black">CCP / RIP :</span>{' '}
-                      {ccp.accountNumber}
-                    </p>
-                    <p className="text-[11px] text-indigo-800/70 mt-2">
-                      Effectuez un virement BaridiMob / CCP vers ce compte
-                      en indiquant votre nom et la référence de réservation
-                      dans le motif, puis envoyez le reçu dans l&apos;onglet
-                      &quot;Mes voyages&quot;.
-                    </p>
-                  </>
-                )}
+                  {paymentMethod === 'BARIDIMOB' && (
+                    <>
+                      <p className="text-xs text-indigo-900">
+                        <span className="font-black">Titulaire :</span>{' '}
+                        {ccp.accountName}
+                      </p>
+                      <p className="text-xs text-indigo-900">
+                        <span className="font-black">CCP / RIP :</span>{' '}
+                        {ccp.accountNumber}
+                      </p>
+                      <p className="text-[11px] text-indigo-800/70 mt-2">
+                        Effectuez un virement BaridiMob / CCP vers ce compte en
+                        indiquant votre nom et la référence de réservation dans
+                        le motif, puis envoyez le reçu dans l&apos;onglet "Mes
+                        voyages".
+                      </p>
+                    </>
+                  )}
 
-                {paymentMethod === 'RIB' && (
-                  <>
-                    <p className="text-xs text-indigo-900">
-                      <span className="font-black">Titulaire :</span>{' '}
-                      {rib.accountName}
-                    </p>
-                    <p className="text-xs text-indigo-900">
-                      <span className="font-black">Banque :</span>{' '}
-                      {rib.bankName}
-                    </p>
-                    <p className="text-xs text-indigo-900">
-                      <span className="font-black">RIB :</span>{' '}
-                      {rib.accountNumber}
-                    </p>
-                    <p className="text-[11px] text-indigo-800/70 mt-2">
-                      Effectuez un virement bancaire vers ce RIB, puis
-                      envoyez le reçu dans l&apos;onglet
-                      &quot;Mes voyages&quot;.
-                    </p>
-                  </>
-                )}
-              </div>
+                  {paymentMethod === 'RIB' && (
+                    <>
+                      <p className="text-xs text-indigo-900">
+                        <span className="font-black">Titulaire :</span>{' '}
+                        {rib.accountName}
+                      </p>
+                      <p className="text-xs text-indigo-900">
+                        <span className="font-black">Banque :</span>{' '}
+                        {rib.bankName}
+                      </p>
+                      <p className="text-xs text-indigo-900">
+                        <span className="font-black">RIB :</span>{' '}
+                        {rib.accountNumber}
+                      </p>
+                      <p className="text-[11px] text-indigo-800/70 mt-2">
+                        Effectuez un virement bancaire vers ce RIB, puis
+                        envoyez le reçu dans l&apos;onglet "Mes voyages".
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={onClose}
