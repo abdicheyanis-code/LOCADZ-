@@ -14,7 +14,8 @@ export const bookingService = {
         .from('bookings')
         .select('start_date, end_date, status')
         .eq('property_id', propertyId)
-        .in('status', ['PENDING_APPROVAL', 'APPROVED', 'PAID']);
+        // ❗️Ici on ne bloque que APPROVED et PAID
+        .in('status', ['APPROVED', 'PAID']);
 
       if (error) {
         console.error('isRangeAvailable error', error);
@@ -54,12 +55,12 @@ export const bookingService = {
 
   /**
    * createBooking travaille avec le modèle LOCADZ :
-   * - total_price = montant payé par le client (base + 8 %)
+   * - total_price = montant payé par le client
    * - base_price = base (nuits × prix_nuit)
-   * - service_fee_client = 8 % client
-   * - host_commission = 10 % hôte
-   * - payout_host = base - 10 %
-   * - commission_fee = revenu plateforme total (8 % + 10 %)
+   * - service_fee_client = % client
+   * - host_commission = % hôte
+   * - payout_host = ce qui reste à l’hôte
+   * - commission_fee = revenu plateforme total (client + hôte)
    */
   createBooking: async (
     bookingData: Omit<Booking, 'id' | 'status' | 'created_at' | 'commission_fee'>
@@ -89,7 +90,6 @@ export const bookingService = {
 
       // 🔔 NOTIF 1 : nouvelle demande de réservation (vers l’hôte)
       try {
-        // On récupère l’hôte à partir du logement
         const { data: property, error: propError } = await supabase
           .from('properties')
           .select('host_id, title')
@@ -121,7 +121,6 @@ export const bookingService = {
       return created;
     } catch (e) {
       console.error('createBooking error', e);
-      // Pas de fallback local : si l’insert échoue, on considère la résa non créée
       return null;
     }
   },
@@ -196,10 +195,9 @@ export const bookingService = {
     }
   },
 
-  // Pour l’instant : hostBookings réels ou rien (pas de simulation locale)
+  // Réservations d’un hôte
   getHostBookings: async (hostId: string): Promise<Booking[]> => {
     try {
-      // Si ta table "bookings" a une colonne host_id :
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
@@ -209,7 +207,6 @@ export const bookingService = {
       return (data as Booking[]) || [];
     } catch (e) {
       console.error('getHostBookings error', e);
-      // Si tu n’as pas host_id côté DB, ça retournera [] (pas de faux bookings)
       return [];
     }
   },
@@ -256,7 +253,6 @@ export const bookingService = {
       }, 0);
     } catch (e) {
       console.error('getHostRevenue error', e);
-      // Pas de fallback local : en cas de souci backend, revenu = 0 (mais pas de chiffres fake)
       return 0;
     }
   },
