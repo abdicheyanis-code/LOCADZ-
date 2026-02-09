@@ -80,7 +80,6 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
 
   return (
     <div className="w-full animate-in fade-in zoom-in-95 duration-700">
-      {/* Barre au-dessus de la carte avec le bouton */}
       <div className="mb-3 flex items-center justify-between">
         <p className="text-[10px] font-black uppercase tracking-widest text-white/50">
           Emplacement approximatif • {property.location}
@@ -97,7 +96,6 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
         )}
       </div>
 
-      {/* Carte */}
       <div className="h-[400px] md:h-[500px] shadow-2xl border-4 border-white/50 rounded-3xl overflow-hidden">
         <div ref={mapContainerRef} className="w-full h-full" />
       </div>
@@ -118,12 +116,14 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const [currentImg, setCurrentImg] = useState(0);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  // ✅ Par défaut : BARIDIMOB, plus de ON_ARRIVAL
   const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>('ON_ARRIVAL');
+    useState<PaymentMethod>('BARIDIMOB');
+
   const [hostPayout, setHostPayout] = useState<Payout | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
 
-  // Pour les preuves de paiement
   const [lastBookingId, setLastBookingId] = useState<string | null>(null);
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -176,7 +176,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     setStep('PROCESSING');
     setIsBlocking(true);
 
-    // Vérification de disponibilité
     const isAvail = await bookingService.isRangeAvailable(
       property.id,
       new Date(startDate),
@@ -194,7 +193,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       return;
     }
 
-    // Simule une "session de paiement" locale
     const result = await createLocalPaymentSession(property.id, pricing);
 
     if (result.success) {
@@ -204,12 +202,11 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         start_date: startDate,
         end_date: endDate,
 
-        // Nouveau modèle de pricing LOCADZ :
-        total_price: pricing.totalClient, // ce que paie le client
-        base_price: pricing.base, // base (nuits × prix_nuit)
-        service_fee_client: pricing.serviceFeeClient, // 8 % côté client
-        host_commission: pricing.hostCommission, // 10 % pris sur l’hôte
-        payout_host: pricing.payoutHost, // ce que tu dois verser à l’hôte
+        total_price: pricing.totalClient,
+        base_price: pricing.base,
+        service_fee_client: pricing.serviceFeeClient,
+        host_commission: pricing.hostCommission,
+        payout_host: pricing.payoutHost,
 
         payment_method: paymentMethod,
         payment_id: result.transactionId,
@@ -219,7 +216,12 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       if (newBooking) {
         setLastBookingId(newBooking.id);
 
-        if (paymentMethod === 'BARIDIMOB') {
+        // ✅ Pour BARIDIMOB, RIB, PAYPAL → étape upload du reçu
+        if (
+          paymentMethod === 'BARIDIMOB' ||
+          paymentMethod === 'RIB' ||
+          paymentMethod === 'PAYPAL'
+        ) {
           setStep('UPLOAD_RECEIPT');
         } else {
           notify({
@@ -288,7 +290,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     }
 
     setUploadInfo(
-      "Preuve de paiement envoyée. Elle sera vérifiée par l'hôte / LOCADZ."
+      "Preuve de paiement envoyée. Elle sera vérifiée par l'hôte / LOCA DZ."
     );
     setStep('SUCCESS');
     onBookingSuccess();
@@ -514,43 +516,15 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   ← RETOUR
                 </button>
                 <h3 className="text-2xl font-black italic text-indigo-950 tracking-tighter uppercase">
-                  Paiement
+                  Mode de paiement
                 </h3>
-                <div className="grid grid-cols-1 gap-3">
-                  <button
-                    onClick={() => setPaymentMethod('ON_ARRIVAL')}
-                    className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
-                      paymentMethod === 'ON_ARRIVAL'
-                        ? 'border-indigo-600 bg-indigo-50 shadow-xl'
-                        : 'border-gray-100 bg-white'
-                    }`}
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
-                        paymentMethod === 'ON_ARRIVAL'
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-400'
-                      }`}
-                    >
-                      🤝
-                    </div>
-                    <div>
-                      <span className="text-xs font-black uppercase block text-indigo-900">
-                        À l&apos;arrivée
-                      </span>
-                      <span className="text-[9px] font-bold text-gray-400 leading-none">
-                        Paiement main à main
-                      </span>
-                    </div>
-                  </button>
 
+                <div className="grid grid-cols-1 gap-3">
+                  {/* BARIDIMOB / CCP */}
                   <button
                     onClick={() => setPaymentMethod('BARIDIMOB')}
-                    disabled={!hostPayout}
                     className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
-                      !hostPayout
-                        ? 'opacity-40 grayscale'
-                        : paymentMethod === 'BARIDIMOB'
+                      paymentMethod === 'BARIDIMOB'
                         ? 'border-indigo-600 bg-indigo-50 shadow-xl'
                         : 'border-gray-100 bg-white'
                     }`}
@@ -566,16 +540,71 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     </div>
                     <div>
                       <span className="text-xs font-black uppercase block text-indigo-900">
-                        BaridiMob
+                        BaridiMob / CCP
                       </span>
                       <span className="text-[9px] font-bold text-gray-400 leading-none">
-                        {hostPayout
-                          ? 'Virement Algérie Poste'
-                          : 'Non configuré'}
+                        Virement Algérie Poste
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* RIB bancaire */}
+                  <button
+                    onClick={() => setPaymentMethod('RIB')}
+                    className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
+                      paymentMethod === 'RIB'
+                        ? 'border-indigo-600 bg-indigo-50 shadow-xl'
+                        : 'border-gray-100 bg-white'
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                        paymentMethod === 'RIB'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      🏦
+                    </div>
+                    <div>
+                      <span className="text-xs font-black uppercase block text-indigo-900">
+                        Banque (RIB)
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 leading-none">
+                        Virement vers un RIB bancaire
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* PayPal (placeholder, reçu à uploader) */}
+                  <button
+                    onClick={() => setPaymentMethod('PAYPAL')}
+                    className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
+                      paymentMethod === 'PAYPAL'
+                        ? 'border-indigo-600 bg-indigo-50 shadow-xl'
+                        : 'border-gray-100 bg-white'
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                        paymentMethod === 'PAYPAL'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      💳
+                    </div>
+                    <div>
+                      <span className="text-xs font-black uppercase block text-indigo-900">
+                        PayPal
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 leading-none">
+                        Paiement en ligne (reçu à uploader)
                       </span>
                     </div>
                   </button>
                 </div>
+
                 <button
                   onClick={handleBooking}
                   disabled={isBlocking}
@@ -605,7 +634,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   {hostPayout ? (
                     <>
                       <p className="text-indigo-700 font-semibold">
-                        Compte bénéficiaire (hôte) :
+                        Coordonnées de paiement (bénéficiaire) :
                       </p>
                       <p className="text-gray-600">
                         {hostPayout.method} • {hostPayout.account_number}
@@ -622,8 +651,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     </p>
                   )}
                   <p className="text-gray-500 mt-2">
-                    Merci de payer via BaridiMob / CCP, puis d&apos;uploader un
-                    reçu (capture écran ou PDF).
+                    Merci d&apos;effectuer le paiement via le mode choisi
+                    (BaridiMob / RIB / PayPal), puis d&apos;uploader un reçu
+                    (capture écran ou PDF).
                   </p>
                 </div>
 
@@ -659,7 +689,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                 <button
                   onClick={handleUploadProof}
                   disabled={isBlocking || !proofFile}
-                  className="w-full py-4 bg-indigo-600 text:white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40"
+                  className="w-full py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40"
                 >
                   ENVOYER LA PREUVE
                 </button>
