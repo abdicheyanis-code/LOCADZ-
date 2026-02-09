@@ -155,7 +155,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const isRTL = language === 'ar';
   const { notify } = useNotification();
 
-  // Empêcher la fermeture pendant un traitement critique
   const handleSafeClose = () => {
     if (isBlocking) return;
     onClose();
@@ -180,7 +179,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     setStep('PROCESSING');
     setIsBlocking(true);
 
-    // 🔁 Nettoyer une ancienne demande PENDING_APPROVAL du MÊME voyageur
+    // Nettoyer une ancienne demande PENDING_APPROVAL du même voyageur / même dates
     try {
       await supabase
         .from('bookings')
@@ -194,7 +193,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       console.warn('Cleanup ancienne réservation PENDING échouée :', e);
     }
 
-    // Vérif de dispo
     const isAvail = await bookingService.isRangeAvailable(
       property.id,
       new Date(startDate),
@@ -221,7 +219,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         start_date: startDate,
         end_date: endDate,
 
-        // Nouveau modèle LOCADZ
         total_price: pricing.totalClient,
         base_price: pricing.base,
         service_fee_client: pricing.serviceFeeClient,
@@ -456,43 +453,44 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
             )}
 
             {step === 'DATES' && (
-              <div className="animate-in slide-in-from-right duration-500 space-y-10">
+              <div className="animate-in slide-in-from-right duration-500 space-y-8">
                 <button
                   onClick={() => setStep('OVERVIEW')}
                   className="text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"
                 >
                   ← RETOUR
                 </button>
-                <h3 className="text-3xl font-black italic text-indigo-950 tracking-tighter">
+                <h3 className="text-3xl font-black italic text-indigo-950 tracking-tighter mb-2">
                   Dates de séjour
                 </h3>
-                <div className="p-8 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100 space-y-6 shadow-inner">
+
+                <div className="space-y-4">
                   <div>
-                    <label className="text-[9px] font-black text-indigo-300 uppercase block mb-1 px-1">
+                    <label className="text-[11px] font-black text-indigo-700 uppercase block mb-1">
                       Arrivée
                     </label>
                     <input
                       type="date"
                       value={startDate}
                       onChange={e => setStartDate(e.target.value)}
-                      className="w-full bg-transparent font-black text-xl text-indigo-950 outline-none"
+                      className="w-full border border-indigo-200 rounded-xl px-3 py-2 text-sm text-indigo-900 bg-white"
                     />
                   </div>
-                  <div className="h-[1px] bg-indigo-100/50" />
                   <div>
-                    <label className="text-[9px] font-black text-indigo-300 uppercase block mb-1 px-1">
+                    <label className="text-[11px] font-black text-indigo-700 uppercase block mb-1">
                       Départ
                     </label>
                     <input
                       type="date"
                       value={endDate}
                       onChange={e => setEndDate(e.target.value)}
-                      className="w-full bg-transparent font-black text-xl text-indigo-950 outline-none"
+                      className="w-full border border-indigo-200 rounded-xl px-3 py-2 text-sm text-indigo-900 bg-white"
                     />
                   </div>
                 </div>
+
                 {nights > 0 && (
-                  <div className="p-8 bg-indigo-950 rounded-[2.5rem] text-white space-y-4 shadow-2xl">
+                  <div className="mt-6 p-6 bg-indigo-950 rounded-[2.5rem] text-white space-y-4 shadow-2xl">
                     <div className="flex justify-between text-[10px] font-black opacity-50 uppercase">
                       <span>
                         {nights} nuits x {formatCurrency(property.price)}
@@ -521,10 +519,11 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     </div>
                   </div>
                 )}
+
                 <button
                   onClick={() => setStep('CONFIRMATION')}
                   disabled={nights <= 0}
-                  className="w-full py-6 bg-indigo-600 disabled:opacity-30 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all"
+                  className="w-full mt-4 py-6 bg-indigo-600 disabled:opacity-30 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all"
                 >
                   CONTINUER
                 </button>
@@ -610,7 +609,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     }`}
                   >
                     <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                      className={`w-12 h-12 rounded-2xl flex(items-center justify-center text-2xl ${
                         paymentMethod === 'PAYPAL'
                           ? 'bg-indigo-600 text-white'
                           : 'bg-gray-100 text-gray-400'
