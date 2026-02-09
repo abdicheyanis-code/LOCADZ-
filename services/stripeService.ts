@@ -1,7 +1,7 @@
 export const PLATFORM_CLIENT_FEE_RATE = 0.08; // 8 % côté client
 export const HOST_COMMISSION_RATE = 0.10;     // 10 % pris sur le prix hôte
 
-// Taux approximatif : 1 DZD ≈ 0.0067 EUR (à ajuster si tu veux)
+// Taux approximatif : 1 DZD ≈ 0.0067 EUR (tu peux ajuster)
 export const DZD_TO_EUR_RATE = 0.0067;
 
 /**
@@ -63,7 +63,7 @@ export const calculatePricing = (pricePerNight: number, nights: number) => {
     payoutHost,       // montant net dû à l’hôte
     platformRevenue,  // revenu total LOCADZ
 
-    // Ancien modèle utilisé dans ton UI
+    // Ancien modèle utilisé dans l’UI
     subtotal,
     commission,
     total,
