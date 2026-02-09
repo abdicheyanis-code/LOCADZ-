@@ -264,23 +264,25 @@ const App: React.FC = () => {
   }, [selectedCategory, properties, maxPrice, minRating]);
 
   if (!hasCheckedSession) return null;
-// Page spéciale : réinitialisation de mot de passe
-if (location.pathname === '/reset-password') {
-  return (
-    <div
-      className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
-      dir={language === 'ar' ? 'rtl' : 'ltr'}
-    >
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#050505]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
+
+  // Page spéciale : réinitialisation de mot de passe
+  if (location.pathname === '/reset-password') {
+    return (
+      <div
+        className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
+        dir={language === 'ar' ? 'rtl' : 'ltr'}
+      >
+        <div className="fixed inset-0 -z-10">
+          <div className="absolute inset-0 bg-[#050505]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
+        </div>
+        <div className="relative z-10 flex flex-col min-h-screen">
+          <ResetPassword language={language} translations={t} />
+        </div>
       </div>
-      <div className="relative z-10 flex flex-col min-h-screen">
-        <ResetPassword language={language} translations={t} />
-      </div>
-    </div>
-  );
-}
+    );
+  }
+
   return (
     <div
       className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
@@ -288,9 +290,11 @@ if (location.pathname === '/reset-password') {
     >
       {/* BACKGROUND */}
       <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-[#050505]" />
+        {/* Couche 1 : grand gradient sombre bleu/violet */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
 
-        <div className="absolute inset-0 transition-opacity duration-[3000ms] ease-in-out">
+        {/* Couche 2 : vidéo / image de catégorie, très subtile */}
+        <div className="absolute inset-0 transition-opacity duration-[3000ms] ease-in-out mix-blend-screen">
           {activeCategory.background_video ? (
             <video
               key={activeCategory.background_video}
@@ -298,7 +302,7 @@ if (location.pathname === '/reset-password') {
               muted
               loop
               playsInline
-              className="w-full h-full object-cover scale-110 blur-[4px] opacity-[0.15]"
+              className="w-full h-full object-cover scale-110 blur-[6px] opacity-[0.18]"
             >
               <source
                 src={activeCategory.background_video}
@@ -307,7 +311,7 @@ if (location.pathname === '/reset-password') {
             </video>
           ) : (
             <div
-              className="w-full h-full bg-cover bg-center scale-110 blur-[4px] opacity-[0.15] transition-all duration-[3000ms]"
+              className="w-full h-full bg-cover bg-center scale-110 blur-[6px] opacity-[0.18] transition-all duration-[3000ms]"
               style={{
                 backgroundImage: `url(${activeCategory.background_image})`,
               }}
@@ -315,15 +319,19 @@ if (location.pathname === '/reset-password') {
           )}
         </div>
 
+        {/* Couche 3 : halos colorés dynamiques selon la catégorie */}
         <div
-          className="absolute top-[-10%] left-[-10%] w-[80%] h-[80%] rounded-full blur-[180px] opacity-[0.12] animate-drift transition-colors duration-[4000ms]"
+          className="absolute -top-40 -left-40 w-[55vw] h-[55vw] rounded-full blur-[140px] opacity-[0.35] animate-drift"
           style={{
-            background: `radial-gradient(circle, ${ambientColor}, transparent)`,
+            background: `radial-gradient(circle at 30% 30%, ${ambientColor}, transparent 70%)`,
           }}
         />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[140px] opacity-[0.18] bg-violet-600/60" />
+        <div className="absolute top-1/3 left-[55%] w-[30vw] h-[30vw] rounded-full blur-[120px] opacity-[0.15] bg-sky-500/40" />
 
-        <div className="absolute inset-0 bg-grain pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
+        {/* Grain + vignette sombre */}
+        <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.18]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
       </div>
 
       {/* APP SHELL */}
