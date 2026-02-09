@@ -18,6 +18,7 @@ import { paymentService } from '../services/paymentService';
 import { ReviewSection } from './ReviewSection';
 import L from 'leaflet';
 import { useNotification } from './NotificationProvider';
+import { supabase } from '../supabaseClient';
 
 interface PropertyDetailProps {
   property: Property;
@@ -132,7 +133,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
       setStep('OVERVIEW');
       setCurrentImg(0);
       setHostPayout(payoutService.getByHost(property.host_id));
@@ -141,9 +141,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       setUploadError(null);
       setUploadInfo(null);
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [isOpen, property.host_id]);
 
   const nights = useMemo(() => {
@@ -157,6 +154,12 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const pricing = calculatePricing(property.price, nights || 1);
   const isRTL = language === 'ar';
   const { notify } = useNotification();
+
+  // Empêcher la fermeture pendant un traitement critique
+  const handleSafeClose = () => {
+    if (isBlocking) return;
+    onClose();
+  };
 
   const handleBooking = async () => {
     if (!currentUser) {
@@ -177,6 +180,21 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     setStep('PROCESSING');
     setIsBlocking(true);
 
+    // 🔁 Nettoyer une ancienne demande PENDING_APPROVAL du MÊME voyageur
+    try {
+      await supabase
+        .from('bookings')
+        .delete()
+        .eq('property_id', property.id)
+        .eq('traveler_id', currentUser.id)
+        .eq('status', 'PENDING_APPROVAL')
+        .eq('start_date', startDate)
+        .eq('end_date', endDate);
+    } catch (e) {
+      console.warn('Cleanup ancienne réservation PENDING échouée :', e);
+    }
+
+    // Vérif de dispo
     const isAvail = await bookingService.isRangeAvailable(
       property.id,
       new Date(startDate),
@@ -306,12 +324,12 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     >
       <div
         className="absolute inset-0 bg-indigo-950/40 backdrop-blur-2xl animate-in fade-in duration-500"
-        onClick={onClose}
+        onClick={handleSafeClose}
       />
 
       <div className="relative w-full max-w-6xl h-[100dvh] md:h-[90vh] bg-white md:rounded-[4rem] shadow-[0_60px_150px_rgba(0,0,0,0.5)] border-none md:border border-white/40 overflow-hidden flex flex-col md:flex-row animate-in slide-in-from-bottom-20 duration-500">
         <button
-          onClick={onClose}
+          onClick={handleSafeClose}
           className={`absolute top-6 ${
             isRTL ? 'right-6' : 'left-6'
           } z-50 bg-white/20 hover:bg-white/40 text-white p-4 rounded-full backdrop-blur-xl transition-all border border-white/20 shadow-xl active:scale-90 group`}
@@ -738,7 +756,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   notification.
                 </p>
                 <button
-                  onClick={onClose}
+                  onClick={handleSafeClose}
                   className="w-full py-6 bg-indigo-950 hover:bg-black text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl transition-all"
                 >
                   TERMINER
