@@ -1,5 +1,5 @@
 export const PLATFORM_CLIENT_FEE_RATE = 0.05; // 5 % côté client
-export const HOST_COMMISSION_RATE = 0.5;     // 5 % pris sur le prix hôte
+export const HOST_COMMISSION_RATE = 0.05;     // 5 % pris sur le prix hôte
 
 // Taux approximatif : 1 DZD ≈ 0.0067 EUR (tu peux ajuster)
 export const DZD_TO_EUR_RATE = 0.0067;
@@ -41,8 +41,8 @@ export const calculatePricing = (pricePerNight: number, nights: number) => {
   const safeNights = Math.max(1, nights || 1);
   const base = pricePerNight * safeNights; // base_price
 
-  const serviceFeeClient = base * PLATFORM_CLIENT_FEE_RATE; // 8 % client
-  const hostCommission = base * HOST_COMMISSION_RATE;       // 10 % hôte
+  const serviceFeeClient = base * PLATFORM_CLIENT_FEE_RATE; // 5 % client
+  const hostCommission = base * HOST_COMMISSION_RATE;       // 5 % hôte
 
   const totalClient = base + serviceFeeClient;              // ce que paie le client
   const payoutHost = base - hostCommission;                 // ce que tu verses à l’hôte
@@ -57,8 +57,8 @@ export const calculatePricing = (pricePerNight: number, nights: number) => {
   return {
     // Nouveau modèle détaillé
     base,             // base_price
-    serviceFeeClient, // 8 % client
-    hostCommission,   // 10 % hôte
+    serviceFeeClient, // 5 % client
+    hostCommission,   // 5 % hôte
     totalClient,      // montant à payer par le client
     payoutHost,       // montant net dû à l’hôte
     platformRevenue,  // revenu total LOCADZ
