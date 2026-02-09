@@ -563,3 +563,218 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                       📲
                     </div>
                     <div>
+                      <span className="text-xs font-black uppercase block text-indigo-900">
+                        BaridiMob / CCP
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 leading-none">
+                        Virement Algérie Poste
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* RIB bancaire */}
+                  <button
+                    onClick={() => setPaymentMethod('RIB')}
+                    className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
+                      paymentMethod === 'RIB'
+                        ? 'border-indigo-600 bg-indigo-50 shadow-xl'
+                        : 'border-gray-100 bg-white'
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                        paymentMethod === 'RIB'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      🏦
+                    </div>
+                    <div>
+                      <span className="text-xs font-black uppercase block text-indigo-900">
+                        Banque (RIB)
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 leading-none">
+                        Virement vers un RIB bancaire
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* PayPal (placeholder, reçu à uploader) */}
+                  <button
+                    onClick={() => setPaymentMethod('PAYPAL')}
+                    className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
+                      paymentMethod === 'PAYPAL'
+                        ? 'border-indigo-600 bg-indigo-50 shadow-xl'
+                        : 'border-gray-100 bg-white'
+                    }`}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                        paymentMethod === 'PAYPAL'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-400'
+                      }`}
+                    >
+                      💳
+                    </div>
+                    <div>
+                      <span className="text-xs font-black uppercase block text-indigo-900">
+                        PayPal
+                      </span>
+                      <span className="text-[9px] font-bold text-gray-400 leading-none">
+                        Paiement en ligne (reçu à uploader)
+                      </span>
+                    </div>
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleBooking}
+                  disabled={isBlocking}
+                  className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all disabled:opacity-50"
+                >
+                  DEMANDER À RÉSERVER
+                </button>
+              </div>
+            )}
+
+            {step === 'UPLOAD_RECEIPT' && (
+              <div className="animate-in slide-in-from-right duration-500 space-y-8 pb-10">
+                <button
+                  onClick={() => setStep('CONFIRMATION')}
+                  className="text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"
+                >
+                  ← RETOUR
+                </button>
+                <h3 className="text-2xl font-black italic text-indigo-950 tracking-tighter uppercase">
+                  Preuve de paiement
+                </h3>
+
+                <div className="p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100 space-y-2 text-[11px]">
+                  <p className="font-bold text-indigo-900">
+                    Montant à payer : {formatCurrency(pricing.total)}
+                  </p>
+                  {hostPayout ? (
+                    <>
+                      <p className="text-indigo-700 font-semibold">
+                        Coordonnées de paiement (bénéficiaire) :
+                      </p>
+                      <p className="text-gray-600">
+                        {hostPayout.method} • {hostPayout.account_number}
+                      </p>
+                      {hostPayout.bank_name && (
+                        <p className="text-gray-600">
+                          {hostPayout.bank_name}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-gray-500">
+                      Coordonnées de paiement hôte non configurées.
+                    </p>
+                  )}
+                  <p className="text-gray-500 mt-2">
+                    Merci d&apos;effectuer le paiement via le mode choisi
+                    (BaridiMob / RIB / PayPal), puis d&apos;uploader un reçu
+                    (capture écran ou PDF).
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase text-indigo-300 ml-1">
+                    Fichier (image ou PDF)
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*,application/pdf"
+                    onChange={e => {
+                      const file = e.target.files?.[0] || null;
+                      setProofFile(file);
+                      setUploadError(null);
+                      setUploadInfo(null);
+                    }}
+                    className="w-full text-[11px] bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2 file:mr-3 file:px-3 file:py-1 file:rounded-xl file:border-none file:bg-indigo-600 file:text-white file:text-[10px] file:font-black"
+                  />
+                </div>
+
+                {uploadError && (
+                  <div className="p-3 rounded-2xl border border-rose-500/40 bg-rose-500/10 text-[11px] font-black uppercase tracking-wide">
+                    {uploadError}
+                  </div>
+                )}
+
+                {uploadInfo && (
+                  <div className="p-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-black uppercase tracking-wide">
+                    {uploadInfo}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleUploadProof}
+                  disabled={isBlocking || !proofFile}
+                  className="w-full py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40"
+                >
+                  ENVOYER LA PREUVE
+                </button>
+              </div>
+            )}
+
+            {step === 'PROCESSING' && (
+              <div className="h-full flex flex-col items-center justify-center text-center py-20 animate-in zoom-in-95">
+                <div className="w-28 h-28 border-4 border-indigo-50 border-t-indigo-600 rounded-full animate-spin mb-12" />
+                <h3 className="text-2xl font-black italic text-indigo-950 uppercase tracking-tight">
+                  Vérification de disponibilité...
+                </h3>
+              </div>
+            )}
+
+            {step === 'SUCCESS' && (
+              <div className="h-full flex flex-col items-center justify-center text-center py-20 animate-in zoom-in-95 duration-700">
+                <div className="w-32 h-32 bg-amber-500 rounded-full flex items-center justify-center shadow-2xl mb-12 animate-bounce-slow">
+                  <svg
+                    className="w-16 h-16 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="4"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <h2 className="text-5xl font-black text-indigo-950 italic tracking-tighter mb-4">
+                  Demande Envoyée
+                </h2>
+                <p className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-12 px-8 leading-relaxed">
+                  L&apos;hôte a été notifié. Il a{' '}
+                  <span className="text-indigo-600">24 heures</span> pour
+                  accepter ou refuser votre demande. Vous recevrez une
+                  notification.
+                </p>
+                <button
+                  onClick={handleSafeClose}
+                  className="w-full py-6 bg-indigo-950 hover:bg-black text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-xl transition-all"
+                >
+                  TERMINER
+                </button>
+              </div>
+            )}
+
+            {step === 'MAP' && <PropertyMap property={property} />}
+
+            {step === 'REVIEWS' && (
+              <ReviewSection
+                propertyId={property.id}
+                currentUser={currentUser}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
