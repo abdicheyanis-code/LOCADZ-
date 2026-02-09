@@ -7,7 +7,9 @@ export type BookingStatus =
   | 'PAID'
   | 'CANCELLED'
   | 'REJECTED';
-export type PaymentMethod = 'ON_ARRIVAL' | 'BARIDIMOB' | 'RIB';
+
+// ✅ Ajout de 'PAYPAL' ici
+export type PaymentMethod = 'ON_ARRIVAL' | 'BARIDIMOB' | 'RIB' | 'PAYPAL';
 
 export interface Category {
   id: string;
@@ -168,6 +170,7 @@ export interface Favorite {
   property_id: string;
   created_at: string;
 }
+
 // -------------------- NOTIFICATIONS --------------------
 
 export type NotificationType =
