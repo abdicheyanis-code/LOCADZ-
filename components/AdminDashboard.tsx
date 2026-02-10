@@ -287,7 +287,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {formatCurrency(stats.totalVolume)}
             </h2>
           </div>
-          <div className="bg-white p-10 rounded-[4rem] text-indigo-950">
+          <div className="bg:white p-10 rounded-[4rem] text-indigo-950">
             <p className="text-[10px] font-black uppercase text-indigo-300 mb-2">
               Réservations
             </p>
@@ -348,7 +348,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* USERS */}
       {activeTab === 'USERS' && (
-        <div className="bg-white/5 border border-white/10 rounded-[4rem] p-12 overflow-hidden animate-in slide-in-from-left duration-500">
+        <div className="bg:white/5 border border:white/10 rounded-[4rem] p-12 overflow-hidden animate-in slide-in-from-left duration-500">
           <h3 className="text-3xl font-black italic text-white mb-10">
             Annuaire du Réseau
           </h3>
@@ -374,10 +374,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           alt=""
                         />
                         <div>
-                          <p className="text-sm font-bold text-white">
+                          <p className="text-sm font-bold text:white">
                             {u.full_name}
                           </p>
-                          <p className="text-[10px] text-white/40">
+                          <p className="text-[10px] text:white/40">
                             {u.email}
                           </p>
                         </div>
@@ -389,7 +389,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         onChange={e =>
                           handleChangeRole(u.id, e.target.value)
                         }
-                        className="bg-black/40 border border-white/10 text-[10px] font-black text-white rounded-lg px-2 py-1 outline-none"
+                        className="bg-black/40 border border-white/10 text-[10px] font-black text:white rounded-lg px-2 py-1 outline-none"
                       >
                         <option value="TRAVELER">TRAVELER</option>
                         <option value="HOST">HOST</option>
@@ -502,7 +502,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             ? '📲 BaridiMob'
                             : proof.payment_method === 'RIB'
                             ? '🏦 Virement banque'
-                            : '🤝 À l’arrivée'}
+                            : proof.payment_method === 'PAYPAL'
+                            ? '💳 PayPal'
+                            : '⚠️ Ancien mode (non utilisé)'}
                         </p>
                       </div>
                       <div>
