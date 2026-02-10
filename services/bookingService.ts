@@ -14,12 +14,11 @@ export const bookingService = {
         .from('bookings')
         .select('start_date, end_date, status')
         .eq('property_id', propertyId)
-        // ❗️Ici on ne bloque que APPROVED et PAID
+        // On bloque uniquement APPROVED et PAID
         .in('status', ['APPROVED', 'PAID']);
 
       if (error) {
         console.error('isRangeAvailable error', error);
-        // En cas d’erreur backend, on ne bloque pas la réservation
         return true;
       }
 
@@ -97,25 +96,33 @@ export const bookingService = {
           .single();
 
         if (!propError && property?.host_id) {
+          const guests = created.guests_count ?? 1;
+
           await createNotification({
             recipientId: property.host_id,
             type: 'booking_created',
             title: 'Nouvelle demande de réservation',
             body:
               (property.title
-                ? `Un voyageur souhaite réserver "${property.title}".`
-                : 'Un voyageur souhaite réserver votre logement.') +
-              ' Connectez-vous à LOCA DZ pour accepter ou refuser.',
+                ? `Un voyageur souhaite réserver "${property.title}".\n`
+                : 'Un voyageur souhaite réserver votre logement.\n') +
+              `Séjour de ${guests} personne(s)\n` +
+              `Du ${created.start_date} au ${created.end_date}\n` +
+              `Montant total : ${created.total_price} DA.\n` +
+              "Connectez-vous à LOCA DZ pour accepter ou refuser.",
             data: {
               booking_id: created.id,
               property_id: created.property_id,
               status: created.status,
+              guests_count: guests,
+              total_price: created.total_price,
+              start_date: created.start_date,
+              end_date: created.end_date,
             },
           });
         }
       } catch (notifError) {
         console.error('createBooking notification error', notifError);
-        // On n’empêche pas la réservation si la notif échoue
       }
 
       return created;
@@ -133,7 +140,7 @@ export const bookingService = {
       // On récupère la réservation avant de la modifier
       const { data: bookingRow, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, traveler_id, property_id, status')
+        .select('id, traveler_id, property_id, status, guests_count, total_price, start_date, end_date')
         .eq('id', bookingId)
         .single();
 
@@ -152,7 +159,6 @@ export const bookingService = {
       if (error) throw error;
 
       // 🔔 NOTIF 2 : réponse de l’hôte au voyageur
-      // On ne notifie que si on passe de PENDING_APPROVAL -> APPROVED / REJECTED
       if (
         previousStatus === 'PENDING_APPROVAL' &&
         (status === 'APPROVED' || status === 'REJECTED')
@@ -167,19 +173,30 @@ export const bookingService = {
           const accepted = status === 'APPROVED';
 
           if (!propError && bookingRow.traveler_id) {
+            const guests = bookingRow.guests_count ?? 1;
             await createNotification({
               recipientId: bookingRow.traveler_id,
               type: accepted ? 'booking_accepted' : 'booking_rejected',
               title: accepted
                 ? 'Votre réservation a été acceptée'
                 : 'Votre réservation a été refusée',
-              body: property?.title
-                ? `Logement : "${property.title}"`
-                : undefined,
+              body:
+                (property?.title
+                  ? `Logement : "${property.title}"\n`
+                  : '') +
+                `Séjour de ${guests} personne(s)\n` +
+                `Du ${bookingRow.start_date} au ${bookingRow.end_date}\n` +
+                (accepted
+                  ? `Montant : ${bookingRow.total_price} DA.`
+                  : ''),
               data: {
                 booking_id: bookingRow.id,
                 property_id: bookingRow.property_id,
                 status,
+                guests_count: guests,
+                total_price: bookingRow.total_price,
+                start_date: bookingRow.start_date,
+                end_date: bookingRow.end_date,
               },
             });
           }
@@ -195,7 +212,6 @@ export const bookingService = {
     }
   },
 
-  // Réservations d’un hôte
   getHostBookings: async (hostId: string): Promise<Booking[]> => {
     try {
       const { data, error } = await supabase
@@ -248,7 +264,6 @@ export const bookingService = {
         if (b.payout_host != null) {
           return sum + Number(b.payout_host);
         }
-        // Fallback pour les anciennes lignes sans payout_host
         return sum + (Number(b.total_price) - Number(b.commission_fee || 0));
       }, 0);
     } catch (e) {
