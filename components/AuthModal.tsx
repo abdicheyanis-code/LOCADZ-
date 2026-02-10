@@ -45,6 +45,11 @@ const AUTH_TRANSLATIONS: Record<AppLanguage, any> = {
     forgotSuccess: 'Email de réinitialisation envoyé. Vérifie ta boîte mail.',
     forgotError: "Erreur lors de l’envoi de l’email de réinitialisation.",
     loginSuccess: 'Connexion réussie.',
+    // ✅ Nouveaux textes
+    termsLabel:
+      "J'accepte les Conditions Générales d’Utilisation et la Politique de Confidentialité LOCA DZ.",
+    termsLink: 'Lire les conditions',
+    termsRequired: 'Vous devez accepter les conditions pour créer un compte.',
   },
   en: {
     portal: 'LOCADZ Member Portal',
@@ -79,6 +84,11 @@ const AUTH_TRANSLATIONS: Record<AppLanguage, any> = {
     forgotSuccess: 'Password reset email sent. Check your inbox.',
     forgotError: 'Error while sending reset email.',
     loginSuccess: 'Login successful.',
+    // ✅ Nouveaux textes
+    termsLabel:
+      'I accept LOCA DZ Terms of Use and Privacy Policy.',
+    termsLink: 'Read terms',
+    termsRequired: 'You must accept the terms to create an account.',
   },
   ar: {
     portal: 'بوابة أعضاء لوكادز',
@@ -113,6 +123,11 @@ const AUTH_TRANSLATIONS: Record<AppLanguage, any> = {
       'تم إرسال بريد لإعادة تعيين كلمة المرور. تحقق من بريدك.',
     forgotError: 'خطأ أثناء إرسال بريد إعادة التعيين.',
     loginSuccess: 'تم تسجيل الدخول بنجاح.',
+    // ✅ Nouveaux textes
+    termsLabel:
+      'أوافق على شروط الاستخدام وسياسة الخصوصية الخاصة بمنصة لوكادز.',
+    termsLink: 'قراءة الشروط',
+    termsRequired: 'يجب عليك قبول الشروط لإنشاء حساب.',
   },
 };
 
@@ -128,6 +143,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole>('TRAVELER');
   const [password, setPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false); // ✅ nouveau
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -144,6 +160,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setPhone('');
       setRole('TRAVELER');
       setPassword('');
+      setAcceptedTerms(false);
       setError('');
       setInfo('');
       setIsLoading(false);
@@ -176,6 +193,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (!isLogin && !validatePhone(phone)) {
       setError(t.invalidPhone);
       notify({ type: 'error', message: t.invalidPhone });
+      return;
+    }
+
+    // ✅ En mode inscription, la case doit être cochée
+    if (!isLogin && !acceptedTerms) {
+      setError(t.termsRequired);
+      notify({ type: 'error', message: t.termsRequired });
       return;
     }
 
@@ -446,6 +470,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         </span>
                       </button>
                     </div>
+                  </div>
+
+                  {/* ✅ Case à cocher "j'accepte les conditions" */}
+                  <div className="mt-3 px-1 flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="locadz-terms"
+                      checked={acceptedTerms}
+                      onChange={e => setAcceptedTerms(e.target.checked)}
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <label
+                      htmlFor="locadz-terms"
+                      className="text-[10px] text-gray-500 leading-snug"
+                    >
+                      {t.termsLabel}{' '}
+                      <a
+                        href="/about"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline text-indigo-500 font-semibold"
+                      >
+                        {t.termsLink}
+                      </a>
+                    </label>
                   </div>
                 </>
               )}
