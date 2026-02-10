@@ -3,7 +3,6 @@ import {
   Property,
   UserProfile,
   PaymentMethod,
-  Payout,
   AppLanguage,
 } from '../types';
 import {
@@ -13,13 +12,10 @@ import {
   formatCurrencyEURFromDZD,
 } from '../services/stripeService';
 import { bookingService } from '../services/bookingService';
-import { payoutService } from '../services/payoutService';
-import { paymentService } from '../services/paymentService';
 import { ReviewSection } from './ReviewSection';
 import L from 'leaflet';
 import { useNotification } from './NotificationProvider';
 import { supabase } from '../supabaseClient';
-import { PLATFORM_PAYOUT } from '../constants';
 
 interface PropertyDetailProps {
   property: Property;
@@ -35,7 +31,6 @@ type Step =
   | 'OVERVIEW'
   | 'DATES'
   | 'CONFIRMATION'
-  | 'UPLOAD_RECEIPT'
   | 'PROCESSING'
   | 'SUCCESS'
   | 'REVIEWS'
@@ -120,32 +115,23 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // ✅ nouveaux champs
+  // NOUVEAU : nombre de personnes + date de naissance
   const [guestsCount, setGuestsCount] = useState<number>(1);
   const [birthdate, setBirthdate] = useState<string>('');
 
+  // Mode de paiement choisi
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('BARIDIMOB');
 
-  const [hostPayout, setHostPayout] = useState<Payout | null>(null);
   const [isBlocking, setIsBlocking] = useState(false);
-
-  const [lastBookingId, setLastBookingId] = useState<string | null>(null);
-  const [proofFile, setProofFile] = useState<File | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadInfo, setUploadInfo] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setStep('OVERVIEW');
       setCurrentImg(0);
-      setHostPayout(payoutService.getByHost(property.host_id));
-      setLastBookingId(null);
-      setProofFile(null);
-      setUploadError(null);
-      setUploadInfo(null);
       setGuestsCount(1);
       setBirthdate('');
+      setPaymentMethod('BARIDIMOB');
     }
   }, [isOpen, property.host_id]);
 
@@ -160,7 +146,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const pricing = calculatePricing(property.price, nights || 1);
   const isRTL = language === 'ar';
   const { notify } = useNotification();
-
   const todayStr = useMemo(
     () => new Date().toISOString().slice(0, 10),
     []
@@ -209,7 +194,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     setIsBlocking(true);
 
     try {
-      // Nettoyer ancienne demande PENDING_APPROVAL du même voyageur / mêmes dates
+      // Supprimer une éventuelle ancienne demande PENDING_APPROVAL pour ces mêmes dates
       await supabase
         .from('bookings')
         .delete()
@@ -258,28 +243,17 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         payment_id: result.transactionId,
         receipt_url: undefined,
 
-        // ✅ nouveaux champs
         guests_count: guestsCount,
         traveler_birthdate: birthdate,
       });
 
       if (newBooking) {
-        setLastBookingId(newBooking.id);
-
-        if (
-          paymentMethod === 'BARIDIMOB' ||
-          paymentMethod === 'RIB' ||
-          paymentMethod === 'PAYPAL'
-        ) {
-          setStep('UPLOAD_RECEIPT');
-        } else {
-          notify({
-            type: 'success',
-            message: 'Demande de réservation envoyée.',
-          });
-          setStep('SUCCESS');
-          onBookingSuccess();
-        }
+        notify({
+          type: 'success',
+          message: 'Demande de réservation envoyée.',
+        });
+        setStep('SUCCESS');
+        onBookingSuccess();
       } else {
         notify({
           type: 'error',
@@ -292,57 +266,12 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       notify({
         type: 'error',
         message:
-          'La simulation de paiement a échoué, veuillez réessayer.',
+          'La simulation de demande a échoué, veuillez réessayer.',
       });
       setStep('CONFIRMATION');
     }
 
     setIsBlocking(false);
-  };
-
-  const handleUploadProof = async () => {
-    if (!currentUser) {
-      setUploadError('Veuillez vous connecter pour envoyer une preuve.');
-      return;
-    }
-    if (!lastBookingId) {
-      setUploadError('Aucune réservation associée trouvée.');
-      return;
-    }
-    if (!proofFile) {
-      setUploadError(
-        'Merci de sélectionner un fichier (image ou PDF).'
-      );
-      return;
-    }
-
-    setIsBlocking(true);
-    setUploadError(null);
-    setUploadInfo(null);
-
-    const { proofId, error } = await paymentService.uploadPaymentProof({
-      userId: currentUser.id,
-      bookingId: lastBookingId,
-      amount: pricing.total,
-      paymentMethod,
-      file: proofFile,
-    });
-
-    setIsBlocking(false);
-
-    if (error || !proofId) {
-      console.error('Upload proof error:', error);
-      setUploadError(
-        "Erreur lors de l'envoi de la preuve. Merci de réessayer."
-      );
-      return;
-    }
-
-    setUploadInfo(
-      "Preuve de paiement envoyée. Elle sera vérifiée par l'hôte / LOCA DZ."
-    );
-    setStep('SUCCESS');
-    onBookingSuccess();
   };
 
   if (!isOpen) return null;
@@ -612,7 +541,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   ← RETOUR
                 </button>
                 <h3 className="text-2xl font-black italic text-indigo-950 tracking-tighter uppercase">
-                  Mode de paiement
+                  Mode de paiement souhaité
                 </h3>
 
                 <div className="grid grid-cols-1 gap-3">
@@ -672,7 +601,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     </div>
                   </button>
 
-                  {/* PayPal (paiement manuel + reçu) */}
+                  {/* PayPal (déclaratif pour l’instant) */}
                   <button
                     onClick={() => setPaymentMethod('PAYPAL')}
                     className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
@@ -695,11 +624,18 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                         PayPal
                       </span>
                       <span className="text-[9px] font-bold text-gray-400 leading-none">
-                        Paiement en ligne (reçu à uploader)
+                        Paiement en ligne (reçu à uploader après acceptation)
                       </span>
                     </div>
                   </button>
                 </div>
+
+                <p className="text-[10px] text-gray-500 leading-relaxed">
+                  Aucune somme ne doit être payée tant que l&apos;hôte n&apos;a
+                  pas accepté votre demande. Si l&apos;hôte accepte, vous
+                  pourrez ensuite envoyer votre preuve de paiement dans
+                  l&apos;onglet <span className="font-bold">“Mes Voyages”</span>.
+                </p>
 
                 <button
                   onClick={handleBooking}
@@ -707,106 +643,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl transition-all disabled:opacity-50"
                 >
                   DEMANDER À RÉSERVER
-                </button>
-              </div>
-            )}
-
-            {step === 'UPLOAD_RECEIPT' && (
-              <div className="animate-in slide-in-from-right duration-500 space-y-8 pb-10">
-                <button
-                  onClick={() => setStep('CONFIRMATION')}
-                  className="text-indigo-400 font-black uppercase text-[10px] tracking-[0.3em]"
-                >
-                  ← RETOUR
-                </button>
-                <h3 className="text-2xl font-black italic text-indigo-950 tracking-tighter uppercase">
-                  Preuve de paiement
-                </h3>
-
-                <div className="p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100 space-y-2 text-[11px]">
-                  <p className="font-bold text-indigo-900">
-                    Montant à payer : {formatCurrency(pricing.total)}
-                  </p>
-
-                  {paymentMethod === 'PAYPAL' ? (
-                    <>
-                      <p className="text-indigo-700 font-semibold">
-                        Paiement via PayPal :
-                      </p>
-                      <p className="text-gray-600">
-                        Envoyez le montant à cette adresse PayPal :
-                      </p>
-                      <p className="text-gray-900 font-semibold break-all">
-                        {PLATFORM_PAYOUT.paypal.email}
-                      </p>
-                      <p className="text-gray-500 mt-2">
-                        Après paiement, faites une capture d&apos;écran ou
-                        téléchargez le reçu depuis votre compte PayPal, puis
-                        uploadez-le ci-dessous.
-                      </p>
-                    </>
-                  ) : hostPayout ? (
-                    <>
-                      <p className="text-indigo-700 font-semibold">
-                        Coordonnées de paiement (bénéficiaire) :
-                      </p>
-                      <p className="text-gray-600">
-                        {hostPayout.method} • {hostPayout.account_number}
-                      </p>
-                      {hostPayout.bank_name && (
-                        <p className="text-gray-600">
-                          {hostPayout.bank_name}
-                        </p>
-                      )}
-                      <p className="text-gray-500 mt-2">
-                        Merci d&apos;effectuer le paiement via le mode choisi
-                        (BaridiMob / RIB), puis d&apos;uploader un reçu
-                        (capture écran ou PDF).
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-gray-500">
-                      Coordonnées de paiement hôte non configurées. Merci de
-                      contacter LOCA DZ.
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[9px] font-black uppercase text-indigo-300 ml-1">
-                    Fichier (image ou PDF)
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*,application/pdf"
-                    onChange={e => {
-                      const file = e.target.files?.[0] || null;
-                      setProofFile(file);
-                      setUploadError(null);
-                      setUploadInfo(null);
-                    }}
-                    className="w-full text-[11px] bg-gray-50 border border-gray-200 rounded-2xl px-3 py-2 file:mr-3 file:px-3 file:py-1 file:rounded-xl file:border-none file:bg-indigo-600 file:text-white file:text-[10px] file:font-black"
-                  />
-                </div>
-
-                {uploadError && (
-                  <div className="p-3 rounded-2xl border border-rose-500/40 bg-rose-500/10 text-[11px] font-black uppercase tracking-wide">
-                    {uploadError}
-                  </div>
-                )}
-
-                {uploadInfo && (
-                  <div className="p-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-black uppercase tracking-wide">
-                    {uploadInfo}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleUploadProof}
-                  disabled={isBlocking || !proofFile}
-                  className="w-full py-4 bg-indigo-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-40"
-                >
-                  ENVOYER LA PREUVE
                 </button>
               </div>
             )}
@@ -841,10 +677,13 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   Demande Envoyée
                 </h2>
                 <p className="text-gray-500 font-bold text-xs uppercase tracking-widest mb-12 px-8 leading-relaxed">
-                  L&apos;hôte a été notifié. Il a{' '}
+                  L&apos;hôte a été notifié avec vos dates, le nombre de
+                  voyageurs et votre âge. Il a{' '}
                   <span className="text-indigo-600">24 heures</span> pour
-                  accepter ou refuser votre demande. Vous recevrez une
-                  notification.
+                  accepter ou refuser votre demande. Ne payez rien tant que
+                  l&apos;hôte n&apos;a pas accepté. Si la demande est acceptée,
+                  vous pourrez envoyer votre preuve de paiement dans
+                  l&apos;onglet &quot;Mes voyages&quot;.
                 </p>
                 <button
                   onClick={handleSafeClose}
