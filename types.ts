@@ -69,8 +69,11 @@ export interface UserProfile {
   id_document_url?: string;
   payout_details: PayoutDetails;
   created_at: string;
-}
 
+  // ✅ nouveau
+  has_accepted_terms?: boolean;
+  accepted_terms_at?: string;
+}
 /**
  * Coordonnées bancaires d’un hôte (ancien système, encore utilisé dans certains écrans)
  */
