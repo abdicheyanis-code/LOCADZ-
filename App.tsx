@@ -107,13 +107,11 @@ const App: React.FC = () => {
     try {
       const props = await propertyService.getAll();
 
-      // On ne prend QUE ce qui vient de la base
       setProperties(props || []);
 
       if (props && props.length > 0) {
         setDbStatus('CONNECTED');
       } else {
-        // DB vide ou pas de résultat : pas de fallback démo
         setDbStatus('ERROR');
       }
 
@@ -126,7 +124,6 @@ const App: React.FC = () => {
     } catch (e) {
       console.error('refreshData error', e);
       setDbStatus('ERROR');
-      // En cas d’erreur backend : pas de données de démo
       setProperties([]);
     } finally {
       setIsLoading(false);
@@ -177,15 +174,15 @@ const App: React.FC = () => {
   const getAmbientColor = (catId: string) => {
     switch (catId) {
       case 'trending':
-        return '#ef4444'; // rouge
+        return '#ef4444';
       case 'beachfront':
-        return '#06b6d4'; // cyan
+        return '#06b6d4';
       case 'cabins':
-        return '#10b981'; // vert
+        return '#10b981';
       case 'sahara':
-        return '#f59e0b'; // orange
+        return '#f59e0b';
       default:
-        return '#6366f1'; // indigo
+        return '#6366f1';
     }
   };
 
@@ -283,6 +280,71 @@ const App: React.FC = () => {
     );
   }
 
+  // ✅ Page spéciale : /about accessible même sans être connecté
+  if (!currentUser && activeView === 'ABOUT') {
+    return (
+      <div
+        className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
+        dir={language === 'ar' ? 'rtl' : 'ltr'}
+      >
+        {/* BACKGROUND */}
+        <div className="fixed inset-0 -z-10">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `
+                radial-gradient(circle at 0% 0%, ${ambientColor}33, transparent 55%),
+                radial-gradient(circle at 100% 100%, ${ambientColor}44, transparent 55%),
+                linear-gradient(to bottom right, #020617, #020617, #020617)
+              `,
+            }}
+          />
+          <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.18]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
+        </div>
+
+        {/* APP SHELL ABOUT PUBLIC */}
+        <div className="relative z-10 flex flex-col min-h-screen">
+          <Navbar
+            userRole={userRole}
+            currentUser={null}
+            language={language}
+            onLanguageChange={setLanguage}
+            onSearch={async q => {
+              const m = await parseSmartSearch(
+                q,
+                CATEGORIES.map(c => c.id)
+              );
+              if (m) setSelectedCategory(m);
+            }}
+            onSwitchRole={() => {}}
+            onOpenAuth={() => setIsAuthOpen(true)}
+            onLogout={() => {}}
+            onGoHome={() => navigate('/')}
+            onNavigate={v => handleNavigate(v as ActiveView, true)}
+            accentColor={ambientColor}
+            dbStatus={dbStatus}
+          />
+
+          <main className="flex-1 transition-all duration-1000 pt-32 pb-40">
+            <div className="px-6 md:px-20 max-w-7xl mx-auto">
+              <AboutUs language={language} translations={t} />
+              <LegalPages language={language} />
+            </div>
+          </main>
+        </div>
+
+        <AuthModal
+          language={language}
+          isOpen={isAuthOpen}
+          onClose={() => setIsAuthOpen(false)}
+          onSuccess={handleAuthSuccess}
+        />
+      </div>
+    );
+  }
+
+  // APP PRINCIPALE
   return (
     <div
       className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
@@ -290,7 +352,6 @@ const App: React.FC = () => {
     >
       {/* BACKGROUND */}
       <div className="fixed inset-0 -z-10">
-        {/* Couche 1 : gradient sombre mais teinté par la catégorie */}
         <div
           className="absolute inset-0"
           style={{
@@ -301,8 +362,6 @@ const App: React.FC = () => {
             `,
           }}
         />
-
-        {/* Couche 2 : vidéo / image de catégorie, très subtile */}
         <div className="absolute inset-0 transition-opacity duration-[3000ms] ease-in-out mix-blend-screen">
           {activeCategory.background_video ? (
             <video
@@ -327,8 +386,6 @@ const App: React.FC = () => {
             />
           )}
         </div>
-
-        {/* Couche 3 : halos colorés dynamiques selon la catégorie */}
         <div
           className="absolute -top-40 -left-40 w-[55vw] h-[55vw] rounded-full blur-[140px] opacity-[0.35] animate-drift"
           style={{
@@ -337,8 +394,6 @@ const App: React.FC = () => {
         />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[140px] opacity-[0.18] bg-violet-600/60" />
         <div className="absolute top-1/3 left-[55%] w-[30vw] h-[30vw] rounded-full blur-[120px] opacity-[0.15] bg-sky-500/40" />
-
-        {/* Grain + vignette sombre */}
         <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.18]" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
       </div>
