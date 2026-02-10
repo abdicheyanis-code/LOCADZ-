@@ -561,9 +561,13 @@ const App: React.FC = () => {
                   <AdminDashboard currentUser={currentUser} />
                 )}
 
-                {activeView === 'BOOKINGS' && currentUser && (
-                  <BookingsView currentUser={currentUser} />
-                )}
+               {activeView === 'BOOKINGS' && currentUser && (
+  <BookingsView
+    currentUser={currentUser}
+    language={language}
+    translations={t}
+  />
+)}
 
                 {activeView === 'PROFILE' && currentUser && (
                   <ProfileSettings
