@@ -8,7 +8,7 @@ export type BookingStatus =
   | 'CANCELLED'
   | 'REJECTED';
 
-// ✅ Ajout de 'PAYPAL' ici
+// ON_ARRIVAL est encore là pour compat, mais tu ne l’utilises plus en UI
 export type PaymentMethod = 'ON_ARRIVAL' | 'BARIDIMOB' | 'RIB' | 'PAYPAL';
 
 export interface Category {
@@ -69,11 +69,11 @@ export interface UserProfile {
   id_document_url?: string;
   payout_details: PayoutDetails;
   created_at: string;
-
-  // ✅ nouveau
+  // CGU
   has_accepted_terms?: boolean;
   accepted_terms_at?: string;
 }
+
 /**
  * Coordonnées bancaires d’un hôte (ancien système, encore utilisé dans certains écrans)
  */
@@ -146,13 +146,13 @@ export interface Booking {
   start_date: string;
   end_date: string;
 
-  // Prix total payé par le client (base + 8 %)
+  // Prix total payé par le client
   total_price: number;
 
-  // Revenu plateforme total (8 % + 10 %)
+  // Revenu plateforme total (client + hôte)
   commission_fee: number;
 
-  // Nouveau modèle détaillé (optionnel pour rétrocompatibilité)
+  // Modèle détaillé
   base_price?: number;
   service_fee_client?: number;
   host_commission?: number;
@@ -165,6 +165,10 @@ export interface Booking {
   created_at: string;
   property_title?: string;
   traveler_name?: string;
+
+  // ✅ NOUVEAU
+  guests_count?: number;
+  traveler_birthdate?: string; // "YYYY-MM-DD"
 }
 
 export interface Favorite {
