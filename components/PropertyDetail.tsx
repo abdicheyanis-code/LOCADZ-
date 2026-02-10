@@ -120,7 +120,10 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Par défaut : BARIDIMOB, plus de ON_ARRIVAL
+  // ✅ nouveaux champs
+  const [guestsCount, setGuestsCount] = useState<number>(1);
+  const [birthdate, setBirthdate] = useState<string>('');
+
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('BARIDIMOB');
 
@@ -141,6 +144,8 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       setProofFile(null);
       setUploadError(null);
       setUploadInfo(null);
+      setGuestsCount(1);
+      setBirthdate('');
     }
   }, [isOpen, property.host_id]);
 
@@ -155,6 +160,11 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
   const pricing = calculatePricing(property.price, nights || 1);
   const isRTL = language === 'ar';
   const { notify } = useNotification();
+
+  const todayStr = useMemo(
+    () => new Date().toISOString().slice(0, 10),
+    []
+  );
 
   const handleSafeClose = () => {
     if (isBlocking) return;
@@ -174,14 +184,32 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         type: 'error',
         message: 'Merci de sélectionner des dates valides.',
       });
+      setStep('DATES');
+      return;
+    }
+    if (!guestsCount || guestsCount < 1) {
+      notify({
+        type: 'error',
+        message: 'Merci de saisir le nombre de voyageurs.',
+      });
+      setStep('DATES');
+      return;
+    }
+    if (!birthdate) {
+      notify({
+        type: 'error',
+        message:
+          'Merci de saisir la date de naissance du voyageur principal.',
+      });
+      setStep('DATES');
       return;
     }
 
     setStep('PROCESSING');
     setIsBlocking(true);
 
-    // Nettoyer une ancienne demande PENDING_APPROVAL du même voyageur / mêmes dates
     try {
+      // Nettoyer ancienne demande PENDING_APPROVAL du même voyageur / mêmes dates
       await supabase
         .from('bookings')
         .delete()
@@ -220,7 +248,6 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         start_date: startDate,
         end_date: endDate,
 
-        // Modèle LOCADZ (5 % client / 5 % hôte)
         total_price: pricing.totalClient,
         base_price: pricing.base,
         service_fee_client: pricing.serviceFeeClient,
@@ -230,6 +257,10 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         payment_method: paymentMethod,
         payment_id: result.transactionId,
         receipt_url: undefined,
+
+        // ✅ nouveaux champs
+        guests_count: guestsCount,
+        traveler_birthdate: birthdate,
       });
 
       if (newBooking) {
@@ -463,7 +494,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   ← RETOUR
                 </button>
                 <h3 className="text-3xl font-black italic text-indigo-950 tracking-tighter mb-2">
-                  Dates de séjour
+                  Dates & Détails du séjour
                 </h3>
 
                 <div className="space-y-4">
@@ -488,6 +519,46 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                       onChange={e => setEndDate(e.target.value)}
                       className="w-full border border-indigo-200 rounded-xl px-3 py-2 text-sm text-indigo-900 bg-white"
                     />
+                  </div>
+
+                  {/* Nombre de voyageurs */}
+                  <div>
+                    <label className="text-[11px] font-black text-indigo-700 uppercase block mb-1">
+                      Nombre de voyageurs
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={guestsCount}
+                      onChange={e =>
+                        setGuestsCount(
+                          Math.max(1, Math.min(20, Number(e.target.value) || 1))
+                        )
+                      }
+                      className="w-full border border-indigo-200 rounded-xl px-3 py-2 text-sm text-indigo-900 bg-white"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Indiquez le nombre total de personnes présentes pendant le séjour.
+                    </p>
+                  </div>
+
+                  {/* Date de naissance */}
+                  <div>
+                    <label className="text-[11px] font-black text-indigo-700 uppercase block mb-1">
+                      Date de naissance du voyageur principal
+                    </label>
+                    <input
+                      type="date"
+                      value={birthdate}
+                      max={todayStr}
+                      onChange={e => setBirthdate(e.target.value)}
+                      className="w-full border border-indigo-200 rounded-xl px-3 py-2 text-sm text-indigo-900 bg-white"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      L&apos;hôte pourra demander une pièce d&apos;identité le jour J
+                      pour vérifier que c&apos;est bien vous.
+                    </p>
                   </div>
                 </div>
 
