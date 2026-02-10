@@ -6,6 +6,7 @@ import {
   BookingStatus,
   PayoutRecord,
   PayoutDetails,
+  Notification,
 } from '../types';
 import { bookingService } from '../services/bookingService';
 import { propertyService } from '../services/propertyService';
@@ -16,6 +17,7 @@ import { ALGERIAN_BANKS } from '../constants';
 import { AddPropertyModal } from './AddPropertyModal';
 import { EditPropertyModal } from './EditPropertyModal';
 import { IdVerificationModal } from './IdVerificationModal';
+import { fetchMyNotifications } from '../services/notifications';
 
 interface HostDashboardProps {
   hostId: string;
@@ -94,6 +96,16 @@ const PropertyCalendar: React.FC<{ propertyId: string }> = ({ propertyId }) => {
   );
 };
 
+// Calcule un âge approximatif à partir d'une date "YYYY-MM-DD"
+const calculateAge = (birthdate?: string | null): number | null => {
+  if (!birthdate) return null;
+  const d = new Date(birthdate);
+  if (isNaN(d.getTime())) return null;
+  const diff = Date.now() - d.getTime();
+  const ageDate = new Date(diff);
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
+};
+
 export const HostDashboard: React.FC<HostDashboardProps> = ({
   hostId,
   hostName,
@@ -102,6 +114,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isVerifModalOpen, setIsVerifModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+
   const [pendingRequests, setPendingRequests] = useState<Booking[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
 
@@ -122,6 +135,10 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
 
   const [payoutHistory, setPayoutHistory] = useState<PayoutRecord[]>([]);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+
+  // 🔔 Notifications récentes
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(true);
 
   const loadDashboardData = useCallback(async () => {
     const props = await propertyService.getByHost(hostId);
@@ -148,6 +165,20 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     setLoadingRequests(false);
   }, [hostId]);
 
+  const loadNotifications = useCallback(async () => {
+    setLoadingNotifs(true);
+    try {
+      const { data, error } = await fetchMyNotifications();
+      if (!error && data) {
+        setNotifications(data);
+      }
+    } catch (e) {
+      console.error('loadNotifications error:', e);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, []);
+
   useEffect(() => {
     const init = async () => {
       const session = authService.getSession();
@@ -169,10 +200,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
       }
 
       await loadDashboardData();
+      await loadNotifications();
     };
 
     init();
-  }, [hostId, hostName, loadDashboardData]);
+  }, [hostId, hostName, loadDashboardData, loadNotifications]);
 
   const handleBookingAction = async (
     id: string,
@@ -180,7 +212,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   ) => {
     const success = await bookingService.updateBookingStatus(id, status);
     if (success) {
-      loadDashboardData();
+      await loadDashboardData();
       onRefresh();
     }
   };
@@ -264,15 +296,70 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const isVerified =
     currentUser?.id_verification_status === 'VERIFIED';
 
-  const statusClass: Record<PayoutRecord['status'], string> = {
+  const statusClassPayout: Record<PayoutRecord['status'], string> = {
     COMPLETED:
       'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
     PROCESSING:
       'bg-amber-500/10 text-amber-500 border border-amber-500/20',
   };
 
+  // Section notifications récentes (haut du dashboard)
+  const recentNotifications = notifications.slice(0, 3);
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 animate-in fade-in slide-in-from-bottom-10 duration-700">
+      {/* 🔔 Notifications récentes */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-2xl bg-white/10 flex items-center justify-center">
+              <span>🔔</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">
+                Notifications récentes
+              </h3>
+              <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
+                Dernières actions sur vos logements
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {loadingNotifs ? (
+          <p className="text-[10px] text-white/40">
+            Chargement des notifications...
+          </p>
+        ) : recentNotifications.length === 0 ? (
+          <p className="text-[10px] text-white/30 italic">
+            Aucune notification pour le moment.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {recentNotifications.map(n => (
+              <div
+                key={n.id}
+                className="bg-white/5 border border-white/10 rounded-2xl px-4 py-3 flex justify-between items-start gap-3"
+              >
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white">
+                    {n.title}
+                  </p>
+                  {n.body && (
+                    <p className="mt-1 text-[11px] text-white/60 whitespace-pre-line">
+                      {n.body}
+                    </p>
+                  )}
+                </div>
+                <span className="text-[9px] text-white/30">
+                  {new Date(n.created_at).toLocaleString()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Bannière Sécurité Hôte */}
       {currentUser && !isVerified && (
         <div className="mb-8 p-6 backdrop-blur-xl rounded-[2.5rem] border border-amber-500/30 bg-amber-500/10 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -312,86 +399,110 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
 
         {pendingRequests.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pendingRequests.map(req => (
-              <div
-                key={req.id}
-                className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-indigo-100 flex flex-col justify-between animate-in zoom-in-95 duration-500"
-              >
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start">
-                    <span className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
-                      {req.property_title}
-                    </span>
-                    <span className="text-[9px] font-black text-gray-300 uppercase">
-                      {new Date(
-                        req.created_at
-                      ).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-[9px] font-black text-indigo-300 uppercase mb-1">
-                      Voyageur
-                    </p>
-                    <p className="text-xl font-black text-indigo-950 italic">
-                      {req.traveler_name || 'Membre LOCADZ'}
-                    </p>
-                  </div>
-                  <div className="flex gap-4 p-4 bg-indigo-50/50 rounded-2xl">
-                    <div className="flex-1">
-                      <p className="text-[8px] font-black text-gray-400 uppercase">
-                        Du
-                      </p>
-                      <p className="text-xs font-black text-indigo-900">
+            {pendingRequests.map(req => {
+              const age = calculateAge(req.traveler_birthdate);
+              const guests = req.guests_count ?? 1;
+
+              return (
+                <div
+                  key={req.id}
+                  className="bg-white p-8 rounded-[2.5rem] shadow-2xl border border-indigo-100 flex flex-col justify-between animate-in zoom-in-95 duration-500"
+                >
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <span className="bg-indigo-50 text-indigo-600 px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest line-clamp-1">
+                        {req.property_title || 'Séjour LOCADZ'}
+                      </span>
+                      <span className="text-[9px] font-black text-gray-300 uppercase">
                         {new Date(
-                          req.start_date
+                          req.created_at
                         ).toLocaleDateString()}
-                      </p>
+                      </span>
                     </div>
-                    <div className="flex-1 text-right">
-                      <p className="text-[8px] font-black text-gray-400 uppercase">
-                        Au
+                    <div>
+                      <p className="text-[9px] font-black text-indigo-300 uppercase mb-1">
+                        Voyageur
                       </p>
-                      <p className="text-xs font-black text-indigo-900">
-                        {new Date(
-                          req.end_date
-                        ).toLocaleDateString()}
+                      <p className="text-xl font-black text-indigo-950 italic">
+                        {req.traveler_name || 'Membre LOCADZ'}
                       </p>
+                      <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
+                        <span>
+                          👥 {guests} voyageur
+                          {guests > 1 ? 's' : ''}
+                        </span>
+                        {age != null && (
+                          <span>• Âge estimé : {age} ans</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-4 p-4 bg-indigo-50/50 rounded-2xl">
+                      <div className="flex-1">
+                        <p className="text-[8px] font-black text-gray-400 uppercase">
+                          Du
+                        </p>
+                        <p className="text-xs font-black text-indigo-900">
+                          {new Date(
+                            req.start_date
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex-1 text-right">
+                        <p className="text-[8px] font-black text-gray-400 uppercase">
+                          Au
+                        </p>
+                        <p className="text-xs font-black text-indigo-900">
+                          {new Date(
+                            req.end_date
+                          ).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-2">
+                      <div>
+                        <p className="text-[9px] font-black text-indigo-300 uppercase">
+                          Net hôte
+                        </p>
+                        <p className="text-lg font-black text-indigo-950">
+                          {formatCurrency(
+                            req.payout_host != null
+                              ? Number(req.payout_host)
+                              : Number(req.total_price) -
+                                  Number(req.commission_fee || 0)
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] font-black text-indigo-300 uppercase">
+                          Montant client
+                        </p>
+                        <p className="text-sm font-black text-indigo-800">
+                          {formatCurrency(req.total_price)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <p className="text-[9px] font-black text-indigo-300 uppercase">
-                      Net hôte
-                    </p>
-                    <p className="text-lg font-black text-indigo-950">
-                      {formatCurrency(
-                        req.payout_host != null
-                          ? Number(req.payout_host)
-                          : Number(req.total_price) -
-                              Number(req.commission_fee || 0)
-                      )}
-                    </p>
+                  <div className="flex gap-3 mt-8">
+                    <button
+                      onClick={() =>
+                        handleBookingAction(req.id, 'REJECTED')
+                      }
+                      className="flex-1 py-4 border-2 border-rose-100 text-rose-500 rounded-2xl text-[9px] font-black uppercase hover:bg-rose-50 transition-all active:scale-95"
+                    >
+                      REFUSER
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleBookingAction(req.id, 'APPROVED')
+                      }
+                      className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl text-[9px] font-black uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+                    >
+                      ACCEPTER
+                    </button>
                   </div>
                 </div>
-                <div className="flex gap-3 mt-8">
-                  <button
-                    onClick={() =>
-                      handleBookingAction(req.id, 'REJECTED')
-                    }
-                    className="flex-1 py-4 border-2 border-rose-100 text-rose-500 rounded-2xl text-[9px] font-black uppercase hover:bg-rose-50 transition-all active:scale-95"
-                  >
-                    REFUSER
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleBookingAction(req.id, 'APPROVED')
-                    }
-                    className="flex-[2] py-4 bg-indigo-600 text-white rounded-2xl text-[9px] font-black uppercase shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
-                  >
-                    ACCEPTER
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="p-12 bg-white/5 border border-white/10 rounded-[2.5rem] text-center opacity-20 italic font-black uppercase text-xs tracking-[0.4em]">
@@ -661,7 +772,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                     </span>
                     <span
                       className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
-                        statusClass[record.status]
+                        statusClassPayout[record.status]
                       }`}
                     >
                       {record.status === 'COMPLETED'
