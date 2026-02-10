@@ -2,6 +2,16 @@ import { supabase } from '../supabaseClient';
 import { Booking, BookingStatus } from '../types';
 import { createNotification } from './notifications';
 
+// Calcule un âge approximatif à partir d'une date "YYYY-MM-DD"
+const calculateAge = (birthdate?: string | null): number | null => {
+  if (!birthdate) return null;
+  const d = new Date(birthdate);
+  if (isNaN(d.getTime())) return null;
+  const diff = Date.now() - d.getTime();
+  const ageDate = new Date(diff);
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
+};
+
 export const bookingService = {
   // Vérifie si un créneau est dispo pour un bien
   isRangeAvailable: async (
@@ -53,13 +63,9 @@ export const bookingService = {
   },
 
   /**
-   * createBooking travaille avec le modèle LOCADZ :
-   * - total_price = montant payé par le client
-   * - base_price = base (nuits × prix_nuit)
-   * - service_fee_client = % client
-   * - host_commission = % hôte
-   * - payout_host = ce qui reste à l’hôte
-   * - commission_fee = revenu plateforme total (client + hôte)
+   * createBooking :
+   * - enregistre la demande (PENDING_APPROVAL)
+   * - envoie une notif à l’hôte avec nb personnes, dates, montant, âge.
    */
   createBooking: async (
     bookingData: Omit<Booking, 'id' | 'status' | 'created_at' | 'commission_fee'>
@@ -97,19 +103,30 @@ export const bookingService = {
 
         if (!propError && property?.host_id) {
           const guests = created.guests_count ?? 1;
+          const age = calculateAge(created.traveler_birthdate);
+
+          let body =
+            (property.title
+              ? `Un voyageur souhaite réserver "${property.title}".\n`
+              : 'Un voyageur souhaite réserver votre logement.\n') +
+            `Séjour de ${guests} personne(s)\n` +
+            `Du ${created.start_date} au ${created.end_date}\n` +
+            `Montant total : ${created.total_price} DA.\n`;
+
+          if (created.traveler_birthdate) {
+            body += `Voyageur principal né le ${created.traveler_birthdate}`;
+            if (age != null) body += ` (âge estimé : ${age} ans)`;
+            body += '.\n';
+          }
+
+          body +=
+            'Rendez-vous sur votre tableau de bord Hôte pour accepter ou refuser.';
 
           await createNotification({
             recipientId: property.host_id,
             type: 'booking_created',
             title: 'Nouvelle demande de réservation',
-            body:
-              (property.title
-                ? `Un voyageur souhaite réserver "${property.title}".\n`
-                : 'Un voyageur souhaite réserver votre logement.\n') +
-              `Séjour de ${guests} personne(s)\n` +
-              `Du ${created.start_date} au ${created.end_date}\n` +
-              `Montant total : ${created.total_price} DA.\n` +
-              "Connectez-vous à LOCA DZ pour accepter ou refuser.",
+            body,
             data: {
               booking_id: created.id,
               property_id: created.property_id,
@@ -118,6 +135,7 @@ export const bookingService = {
               total_price: created.total_price,
               start_date: created.start_date,
               end_date: created.end_date,
+              traveler_birthdate: created.traveler_birthdate,
             },
           });
         }
@@ -140,7 +158,9 @@ export const bookingService = {
       // On récupère la réservation avant de la modifier
       const { data: bookingRow, error: fetchError } = await supabase
         .from('bookings')
-        .select('id, traveler_id, property_id, status, guests_count, total_price, start_date, end_date')
+        .select(
+          'id, traveler_id, property_id, status, guests_count, total_price, start_date, end_date, traveler_birthdate'
+        )
         .eq('id', bookingId)
         .single();
 
@@ -174,21 +194,30 @@ export const bookingService = {
 
           if (!propError && bookingRow.traveler_id) {
             const guests = bookingRow.guests_count ?? 1;
+            const age = calculateAge(bookingRow.traveler_birthdate);
+
+            let body =
+              (property?.title
+                ? `Logement : "${property.title}"\n`
+                : '') +
+              `Séjour de ${guests} personne(s)\n` +
+              `Du ${bookingRow.start_date} au ${bookingRow.end_date}\n`;
+
+            if (age != null) {
+              body += `Âge estimé voyageur principal : ${age} ans.\n`;
+            }
+
+            if (accepted) {
+              body += `Montant : ${bookingRow.total_price} DA.`;
+            }
+
             await createNotification({
               recipientId: bookingRow.traveler_id,
               type: accepted ? 'booking_accepted' : 'booking_rejected',
               title: accepted
                 ? 'Votre réservation a été acceptée'
                 : 'Votre réservation a été refusée',
-              body:
-                (property?.title
-                  ? `Logement : "${property.title}"\n`
-                  : '') +
-                `Séjour de ${guests} personne(s)\n` +
-                `Du ${bookingRow.start_date} au ${bookingRow.end_date}\n` +
-                (accepted
-                  ? `Montant : ${bookingRow.total_price} DA.`
-                  : ''),
+              body,
               data: {
                 booking_id: bookingRow.id,
                 property_id: bookingRow.property_id,
@@ -197,6 +226,7 @@ export const bookingService = {
                 total_price: bookingRow.total_price,
                 start_date: bookingRow.start_date,
                 end_date: bookingRow.end_date,
+                traveler_birthdate: bookingRow.traveler_birthdate,
               },
             });
           }
@@ -212,15 +242,17 @@ export const bookingService = {
     }
   },
 
+  // ✅ Réservations d’un hôte : on joint avec properties au lieu de filtrer sur host_id (qui n’existe pas dans bookings)
   getHostBookings: async (hostId: string): Promise<Booking[]> => {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('*')
-        .eq('host_id', hostId);
+        .select('*, properties!inner(host_id)')
+        .eq('properties.host_id', hostId);
 
       if (error) throw error;
-      return (data as Booking[]) || [];
+      // data contient aussi un champ "properties", qu’on ignore ici
+      return (data as any[] as Booking[]) || [];
     } catch (e) {
       console.error('getHostBookings error', e);
       return [];
