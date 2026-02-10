@@ -4,6 +4,7 @@ import { bookingService } from '../services/bookingService';
 import { propertyService } from '../services/propertyService';
 import { paymentService } from '../services/paymentService';
 import { formatCurrency } from '../services/stripeService';
+import { PLATFORM_PAYOUT } from '../constants';
 
 type BookingWithProperty = Booking & { property?: Property };
 
@@ -21,7 +22,7 @@ const paymentMethodLabel = (method: PaymentMethod) => {
       return 'PayPal';
     case 'ON_ARRIVAL':
     default:
-      return "Paiement à l'arrivée";
+      return 'Paiement à l’arrivée';
   }
 };
 
@@ -54,6 +55,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const ccp = PLATFORM_PAYOUT.ccp;
+  const rib = PLATFORM_PAYOUT.rib;
+  const paypal = PLATFORM_PAYOUT.paypal;
 
   const loadData = async () => {
     setLoading(true);
@@ -95,19 +100,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     setError(null);
     setMessage(null);
 
-    // On accepte les preuves seulement pour BARIDIMOB / RIB / PAYPAL
-    if (
-      booking.payment_method !== 'BARIDIMOB' &&
-      booking.payment_method !== 'RIB' &&
-      booking.payment_method !== 'PAYPAL'
-    ) {
+    // On ne permet l’envoi que pour BARIDIMOB / RIB / PAYPAL
+    const allowed: PaymentMethod[] = ['BARIDIMOB', 'RIB', 'PAYPAL'];
+    if (!allowed.includes(booking.payment_method)) {
       setError(
         "Ce mode de paiement ne nécessite pas d'envoi de reçu via la plateforme."
       );
       return;
     }
 
-    // Seulement après ACCEPTATION de l'hôte
+    // On n'autorise que si la réservation est ACCEPTÉE par l’hôte
     if (booking.status !== 'APPROVED') {
       setError(
         "Attendez que l'hôte accepte la demande avant d'envoyer la preuve de paiement."
@@ -133,8 +135,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         );
       } else {
         setMessage(
-          "Reçu envoyé. L'équipe LOCA DZ validera votre paiement manuellement."
+          "Reçu envoyé. L'équipe LOCA DZ ou l'hôte validera votre paiement manuellement."
         );
+        // On recharge pour actualiser le statut si besoin
+        loadData();
       }
     } catch (e) {
       console.error('handleUploadProof error:', e);
@@ -204,14 +208,11 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         <div className="space-y-4">
           {bookings.map(b => {
             const prop = b.property;
-
-            const isManualPayment =
-              b.payment_method === 'BARIDIMOB' ||
-              b.payment_method === 'RIB' ||
-              b.payment_method === 'PAYPAL';
-
             const canUploadProof =
-              isManualPayment && b.status === 'APPROVED';
+              (b.payment_method === 'BARIDIMOB' ||
+                b.payment_method === 'RIB' ||
+                b.payment_method === 'PAYPAL') &&
+              b.status === 'APPROVED';
 
             return (
               <div
@@ -276,3 +277,104 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       <div className="font-bold">
                         {paymentMethodLabel(b.payment_method)}
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOUTON ENVOI PREUVE + INSTRUCTIONS */}
+                <div className="w-full md:w-64 space-y-2">
+                  {canUploadProof && (
+                    <>
+                      <label className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] cursor-pointer hover:bg-indigo-700 active:scale-95 transition-all">
+                        {uploadingId === b.id ? (
+                          <>
+                            <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <span>Envoi en cours...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Envoyer mon reçu</span>
+                            <span>📎</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={e =>
+                            handleUploadProof(
+                              b,
+                              e.target.files ? e.target.files[0] : null
+                            )
+                          }
+                        />
+                      </label>
+
+                      <div className="text-[10px] text-white/50 leading-snug mt-1">
+                        {b.payment_method === 'BARIDIMOB' && (
+                          <>
+                            <p>
+                              Effectuez un virement BaridiMob / CCP vers :
+                            </p>
+                            <p className="font-semibold">
+                              Titulaire : {ccp.accountName}
+                            </p>
+                            <p className="font-semibold">
+                              CCP / RIP : {ccp.accountNumber}
+                            </p>
+                          </>
+                        )}
+
+                        {b.payment_method === 'RIB' && (
+                          <>
+                            <p>Effectuez un virement bancaire vers :</p>
+                            <p className="font-semibold">
+                              Titulaire : {rib.accountName}
+                            </p>
+                            <p className="font-semibold">
+                              Banque : {rib.bankName}
+                            </p>
+                            <p className="font-semibold">
+                              RIB : {rib.accountNumber}
+                            </p>
+                          </>
+                        )}
+
+                        {b.payment_method === 'PAYPAL' && (
+                          <>
+                            <p>Payer via PayPal à cette adresse :</p>
+                            <p className="font-semibold break-all">
+                              {paypal.email}
+                            </p>
+                          </>
+                        )}
+
+                        <p className="mt-1">
+                          Puis uploadez une capture d&apos;écran ou un reçu PDF
+                          ci-dessus.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {!canUploadProof && b.status === 'PENDING_APPROVAL' && (
+                    <p className="text-[10px] text-white/40 leading-snug">
+                      Attendez que l&apos;hôte accepte votre demande avant de
+                      payer ou d&apos;envoyer un reçu.
+                    </p>
+                  )}
+
+                  {!canUploadProof && b.status === 'PAID' && (
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">
+                      Paiement validé
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
