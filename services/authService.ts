@@ -38,6 +38,9 @@ const mapRowToUserProfile = (row: any): UserProfile => {
         accountNumber: '',
       },
     created_at: row.created_at,
+    // ✅ nouveaux champs (facultatifs dans UserProfile)
+    has_accepted_terms: row.has_accepted_terms ?? false,
+    accepted_terms_at: row.accepted_terms_at ?? undefined,
   };
 };
 
@@ -77,13 +80,16 @@ const fetchOrCreateCurrentUserProfile = async (): Promise<UserProfile | null> =>
 
   if (!row) {
     // Pas encore de profil -> on le crée à partir des metadata
+    const meta = (authUser.user_metadata || {}) as any;
+
     const full_name =
-      (authUser.user_metadata as any)?.full_name ||
-      authUser.email ||
-      'LOCADZ Member';
-    const phone_number = (authUser.user_metadata as any)?.phone_number || null;
-    const role = ((authUser.user_metadata as any)?.role as UserRole) || 'TRAVELER';
+      meta.full_name || authUser.email || 'LOCADZ Member';
+    const phone_number = meta.phone_number || null;
+    const role = (meta.role as UserRole) || 'TRAVELER';
     const avatar_url = buildAvatarUrl(authUser.email, authUser.id);
+
+    const hasAcceptedTerms = !!meta.has_accepted_terms;
+    const acceptedTermsAt = meta.accepted_terms_at || null;
 
     const { data: inserted, error: insertError } = await supabase
       .from('users')
@@ -94,6 +100,8 @@ const fetchOrCreateCurrentUserProfile = async (): Promise<UserProfile | null> =>
         phone_number,
         role,
         avatar_url,
+        has_accepted_terms: hasAcceptedTerms,
+        accepted_terms_at: acceptedTermsAt,
       })
       .select()
       .single();
@@ -110,6 +118,7 @@ const fetchOrCreateCurrentUserProfile = async (): Promise<UserProfile | null> =>
 export const authService = {
   /**
    * Inscription : email + mot de passe + nom + téléphone + rôle
+   * (appelée UNIQUEMENT si la case "j'accepte les conditions" est cochée dans l'UI)
    */
   register: async (
     fullName: string,
@@ -136,6 +145,8 @@ export const authService = {
     }
 
     // 2) Tentative d'inscription Supabase Auth
+    const nowIso = new Date().toISOString();
+
     const { error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
@@ -144,6 +155,9 @@ export const authService = {
           full_name: fullName,
           phone_number: cleanPhone,
           role,
+          // ✅ On stocke l'acceptation dans les metadata Auth
+          has_accepted_terms: true,
+          accepted_terms_at: nowIso,
         },
       },
     });
