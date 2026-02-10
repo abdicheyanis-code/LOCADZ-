@@ -65,7 +65,7 @@ export const bookingService = {
   /**
    * createBooking :
    * - enregistre la demande (PENDING_APPROVAL)
-   * - envoie une notif à l’hôte avec nb personnes, dates, montant, âge.
+   * - envoie une notif à l’hôte avec nb personnes, dates, montant, date de naissance + âge.
    */
   createBooking: async (
     bookingData: Omit<Booking, 'id' | 'status' | 'created_at' | 'commission_fee'>
@@ -196,15 +196,20 @@ export const bookingService = {
             const guests = bookingRow.guests_count ?? 1;
             const age = calculateAge(bookingRow.traveler_birthdate);
 
-            let body =
-              (property?.title
-                ? `Logement : "${property.title}"\n`
-                : '') +
+            let body = '';
+
+            if (property?.title) {
+              body += `Logement : "${property.title}"\n`;
+            }
+
+            body +=
               `Séjour de ${guests} personne(s)\n` +
               `Du ${bookingRow.start_date} au ${bookingRow.end_date}\n`;
 
-            if (age != null) {
-              body += `Âge estimé voyageur principal : ${age} ans.\n`;
+            if (bookingRow.traveler_birthdate) {
+              body += `Voyageur principal né le ${bookingRow.traveler_birthdate}`;
+              if (age != null) body += ` (âge estimé : ${age} ans)`;
+              body += '.\n';
             }
 
             if (accepted) {
@@ -242,7 +247,7 @@ export const bookingService = {
     }
   },
 
-  // ✅ Réservations d’un hôte : on joint avec properties au lieu de filtrer sur host_id (qui n’existe pas dans bookings)
+  // Réservations d’un hôte : jointure avec properties sur host_id
   getHostBookings: async (hostId: string): Promise<Booking[]> => {
     try {
       const { data, error } = await supabase
@@ -251,7 +256,6 @@ export const bookingService = {
         .eq('properties.host_id', hostId);
 
       if (error) throw error;
-      // data contient aussi un champ "properties", qu’on ignore ici
       return (data as any[] as Booking[]) || [];
     } catch (e) {
       console.error('getHostBookings error', e);
