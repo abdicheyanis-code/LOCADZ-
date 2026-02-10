@@ -19,6 +19,7 @@ import { ReviewSection } from './ReviewSection';
 import L from 'leaflet';
 import { useNotification } from './NotificationProvider';
 import { supabase } from '../supabaseClient';
+import { PLATFORM_PAYOUT } from '../constants';
 
 interface PropertyDetailProps {
   property: Property;
@@ -219,7 +220,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         start_date: startDate,
         end_date: endDate,
 
-        // Modèle LOCADZ (avec 5 % / 5 %)
+        // Modèle LOCADZ (5 % client / 5 % hôte)
         total_price: pricing.totalClient,
         base_price: pricing.base,
         service_fee_client: pricing.serviceFeeClient,
@@ -600,7 +601,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     </div>
                   </button>
 
-                  {/* PayPal (placeholder, reçu à uploader) */}
+                  {/* PayPal (paiement manuel + reçu) */}
                   <button
                     onClick={() => setPaymentMethod('PAYPAL')}
                     className={`p-6 rounded-[2rem] border-2 transition-all flex items-center gap-4 text-left ${
@@ -655,7 +656,25 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                   <p className="font-bold text-indigo-900">
                     Montant à payer : {formatCurrency(pricing.total)}
                   </p>
-                  {hostPayout ? (
+
+                  {paymentMethod === 'PAYPAL' ? (
+                    <>
+                      <p className="text-indigo-700 font-semibold">
+                        Paiement via PayPal :
+                      </p>
+                      <p className="text-gray-600">
+                        Envoyez le montant à cette adresse PayPal :
+                      </p>
+                      <p className="text-gray-900 font-semibold break-all">
+                        {PLATFORM_PAYOUT.paypal.email}
+                      </p>
+                      <p className="text-gray-500 mt-2">
+                        Après paiement, faites une capture d&apos;écran ou
+                        téléchargez le reçu depuis votre compte PayPal, puis
+                        uploadez-le ci-dessous.
+                      </p>
+                    </>
+                  ) : hostPayout ? (
                     <>
                       <p className="text-indigo-700 font-semibold">
                         Coordonnées de paiement (bénéficiaire) :
@@ -668,17 +687,18 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                           {hostPayout.bank_name}
                         </p>
                       )}
+                      <p className="text-gray-500 mt-2">
+                        Merci d&apos;effectuer le paiement via le mode choisi
+                        (BaridiMob / RIB), puis d&apos;uploader un reçu
+                        (capture écran ou PDF).
+                      </p>
                     </>
                   ) : (
                     <p className="text-gray-500">
-                      Coordonnées de paiement hôte non configurées.
+                      Coordonnées de paiement hôte non configurées. Merci de
+                      contacter LOCA DZ.
                     </p>
                   )}
-                  <p className="text-gray-500 mt-2">
-                    Merci d&apos;effectuer le paiement via le mode choisi
-                    (BaridiMob / RIB / PayPal), puis d&apos;uploader un reçu
-                    (capture écran ou PDF).
-                  </p>
                 </div>
 
                 <div className="space-y-2">
