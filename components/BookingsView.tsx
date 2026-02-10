@@ -17,9 +17,11 @@ const paymentMethodLabel = (method: PaymentMethod) => {
       return 'BaridiMob / CCP';
     case 'RIB':
       return 'Virement bancaire (RIB)';
+    case 'PAYPAL':
+      return 'PayPal';
     case 'ON_ARRIVAL':
     default:
-      return 'Paiement à l’arrivée';
+      return "Paiement à l'arrivée";
   }
 };
 
@@ -93,10 +95,11 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     setError(null);
     setMessage(null);
 
-    // On ne permet l’envoi que pour BARIDIMOB / RIB
+    // On accepte les preuves seulement pour BARIDIMOB / RIB / PAYPAL
     if (
       booking.payment_method !== 'BARIDIMOB' &&
-      booking.payment_method !== 'RIB'
+      booking.payment_method !== 'RIB' &&
+      booking.payment_method !== 'PAYPAL'
     ) {
       setError(
         "Ce mode de paiement ne nécessite pas d'envoi de reçu via la plateforme."
@@ -104,8 +107,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       return;
     }
 
-    // Idéalement quand la réservation est APPROVED par l’hôte
-    if (booking.status === 'PENDING_APPROVAL') {
+    // Seulement après ACCEPTATION de l'hôte
+    if (booking.status !== 'APPROVED') {
       setError(
         "Attendez que l'hôte accepte la demande avant d'envoyer la preuve de paiement."
       );
@@ -130,7 +133,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         );
       } else {
         setMessage(
-          "Reçu envoyé. L'équipe LOCADZ validera votre paiement manuellement."
+          "Reçu envoyé. L'équipe LOCA DZ validera votre paiement manuellement."
         );
       }
     } catch (e) {
@@ -201,10 +204,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         <div className="space-y-4">
           {bookings.map(b => {
             const prop = b.property;
+
+            const isManualPayment =
+              b.payment_method === 'BARIDIMOB' ||
+              b.payment_method === 'RIB' ||
+              b.payment_method === 'PAYPAL';
+
             const canUploadProof =
-              (b.payment_method === 'BARIDIMOB' ||
-                b.payment_method === 'RIB') &&
-              (b.status === 'APPROVED' || b.status === 'PENDING_APPROVAL');
+              isManualPayment && b.status === 'APPROVED';
 
             return (
               <div
@@ -269,50 +276,3 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       <div className="font-bold">
                         {paymentMethodLabel(b.payment_method)}
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* BOUTON ENVOI PREUVE */}
-                <div className="w-full md:w-auto">
-                  {canUploadProof && (
-                    <label className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] cursor-pointer hover:bg-indigo-700 active:scale-95 transition-all">
-                      {uploadingId === b.id ? (
-                        <>
-                          <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                          <span>Envoi en cours...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Envoyer mon reçu</span>
-                          <span>📎</span>
-                        </>
-                      )}
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        className="hidden"
-                        onChange={e =>
-                          handleUploadProof(
-                            b,
-                            e.target.files ? e.target.files[0] : null
-                          )
-                        }
-                      />
-                    </label>
-                  )}
-
-                  {!canUploadProof && b.status === 'PAID' && (
-                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">
-                      Paiement validé
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
