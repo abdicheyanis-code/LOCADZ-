@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Booking, Property, UserProfile, PaymentMethod } from '../types';
+import {
+  Booking,
+  Property,
+  UserProfile,
+  PaymentMethod,
+  AppLanguage,
+} from '../types';
 import { bookingService } from '../services/bookingService';
 import { propertyService } from '../services/propertyService';
 import { paymentService } from '../services/paymentService';
@@ -10,45 +16,17 @@ type BookingWithProperty = Booking & { property?: Property };
 
 interface BookingsViewProps {
   currentUser: UserProfile;
+  language: AppLanguage;
+  translations: any;
 }
 
-const paymentMethodLabel = (method: PaymentMethod) => {
-  switch (method) {
-    case 'BARIDIMOB':
-      return 'BaridiMob / CCP';
-    case 'RIB':
-      return 'Virement bancaire (RIB)';
-    case 'PAYPAL':
-      return 'PayPal';
-    case 'ON_ARRIVAL':
-    default:
-      return 'Paiement à l’arrivée';
-  }
-};
-
-const statusLabel: Record<Booking['status'], string> = {
-  PENDING_APPROVAL: 'En attente validation hôte',
-  APPROVED: 'En attente paiement',
-  PAID: 'Payée',
-  CANCELLED: 'Annulée',
-  REJECTED: 'Refusée',
-};
-
-const statusClass: Record<Booking['status'], string> = {
-  PENDING_APPROVAL:
-    'bg-amber-500/10 text-amber-500 border border-amber-500/20',
-  APPROVED:
-    'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20',
-  PAID:
-    'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
-  CANCELLED:
-    'bg-gray-500/10 text-gray-400 border border-gray-500/20',
-  REJECTED:
-    'bg-rose-500/10 text-rose-500 border border-rose-500/20',
-};
+const getLocale = (language: AppLanguage) =>
+  language === 'fr' ? 'fr-FR' : language === 'ar' ? 'ar-DZ' : 'en-US';
 
 export const BookingsView: React.FC<BookingsViewProps> = ({
   currentUser,
+  language,
+  translations: t,
 }) => {
   const [bookings, setBookings] = useState<BookingWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +37,25 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
   const ccp = PLATFORM_PAYOUT.ccp;
   const rib = PLATFORM_PAYOUT.rib;
   const paypal = PLATFORM_PAYOUT.paypal;
+  const locale = getLocale(language);
+
+  const paymentMethodLabel = (method: PaymentMethod) => {
+    switch (method) {
+      case 'BARIDIMOB':
+        return 'BaridiMob / CCP';
+      case 'RIB':
+        return language === 'fr'
+          ? 'Virement bancaire (RIB)'
+          : language === 'ar'
+          ? 'تحويل بنكي (RIB)'
+          : 'Bank transfer (RIB)';
+      case 'PAYPAL':
+        return 'PayPal';
+      case 'ON_ARRIVAL':
+      default:
+        return t.payArrival;
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -81,7 +78,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       setBookings(withProps);
     } catch (e) {
       console.error('loadData bookings error:', e);
-      setError("Impossible de charger vos réservations pour l'instant.");
+      setError(t.bookingsLoadError);
     } finally {
       setLoading(false);
     }
@@ -100,20 +97,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     setError(null);
     setMessage(null);
 
-    // On ne permet l’envoi que pour BARIDIMOB / RIB / PAYPAL
     const allowed: PaymentMethod[] = ['BARIDIMOB', 'RIB', 'PAYPAL'];
     if (!allowed.includes(booking.payment_method)) {
-      setError(
-        "Ce mode de paiement ne nécessite pas d'envoi de reçu via la plateforme."
-      );
+      setError(t.noHostInfo);
       return;
     }
 
-    // On n'autorise que si la réservation est ACCEPTÉE par l’hôte
     if (booking.status !== 'APPROVED') {
-      setError(
-        "Attendez que l'hôte accepte la demande avant d'envoyer la preuve de paiement."
-      );
+      setError(t.waitHostBeforeProof);
       return;
     }
 
@@ -130,21 +121,14 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
       if (error || !proofId) {
         console.error('uploadPaymentProof error:', error);
-        setError(
-          "Échec de l'envoi du reçu. Réessayez plus tard ou contactez le support."
-        );
+        setError(t.proofUploadFailed);
       } else {
-        setMessage(
-          "Reçu envoyé. L'équipe LOCA DZ ou l'hôte validera votre paiement manuellement."
-        );
-        // On recharge pour actualiser le statut si besoin
+        setMessage(t.proofUploadSuccess);
         loadData();
       }
     } catch (e) {
       console.error('handleUploadProof error:', e);
-      setError(
-        "Une erreur inattendue s'est produite lors de l'envoi du reçu."
-      );
+      setError(t.proofUploadUnexpected);
     } finally {
       setUploadingId(null);
     }
@@ -155,7 +139,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       <div className="py-40 text-center flex flex-col items-center gap-4">
         <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         <span className="text-[10px] font-black uppercase tracking-[0.4em] text-indigo-400">
-          Chargement de vos voyages...
+          {t.bookingsLoading}
         </span>
       </div>
     );
@@ -166,10 +150,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-3xl font-black italic text-white uppercase tracking-tighter">
-            Mes Voyages
+            {t.bookings}
           </h2>
           <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mt-1">
-            Suivi de vos réservations & paiements
+            {t.bookingsSubtitle}
           </p>
         </div>
         <button
@@ -177,7 +161,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
           className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-white/10 active:scale-95 transition-all flex items-center gap-2"
         >
           <span>↻</span>
-          <span>Rafraîchir</span>
+          <span>{t.bookingsRefresh}</span>
         </button>
       </div>
 
@@ -197,11 +181,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
         <div className="py-40 text-center opacity-30">
           <p className="text-5xl mb-6">🧳</p>
           <p className="text-[11px] font-black text-white uppercase tracking-[0.4em]">
-            Aucune réservation pour le moment
+            {t.noBookings}
           </p>
           <p className="text-xs text-white/40 mt-3">
-            Dès que vous réserverez un séjour, il apparaîtra ici avec son
-            statut et les informations de paiement.
+            {t.bookingsNoneSubtitle}
           </p>
         </div>
       ) : (
@@ -238,33 +221,39 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         {prop?.location || 'Algérie'}
                       </p>
                     </div>
-                    <span
-                      className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${statusClass[b.status]}`}
-                    >
-                      {statusLabel[b.status]}
+                    <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-white/10 text-white/70">
+                      {b.status === 'PENDING_APPROVAL'
+                        ? t.statusPending || 'En attente validation hôte'
+                        : b.status === 'APPROVED'
+                        ? t.statusApproved || 'En attente paiement'
+                        : b.status === 'PAID'
+                        ? t.statusPaid || 'Payée'
+                        : b.status === 'CANCELLED'
+                        ? t.statusCancelled || 'Annulée'
+                        : t.statusRejected || 'Refusée'}
                     </span>
                   </div>
 
                   <div className="flex flex-wrap gap-4 text-[11px] text-white/60 mt-1">
                     <div>
                       <span className="font-black uppercase text-[9px] text-white/40">
-                        Du
+                        {t.labelFrom}
                       </span>
                       <div className="font-bold">
-                        {new Date(b.start_date).toLocaleDateString()}
+                        {new Date(b.start_date).toLocaleDateString(locale)}
                       </div>
                     </div>
                     <div>
                       <span className="font-black uppercase text-[9px] text-white/40">
-                        Au
+                        {t.labelTo}
                       </span>
                       <div className="font-bold">
-                        {new Date(b.end_date).toLocaleDateString()}
+                        {new Date(b.end_date).toLocaleDateString(locale)}
                       </div>
                     </div>
                     <div>
                       <span className="font-black uppercase text-[9px] text-white/40">
-                        Montant
+                        {t.labelAmount}
                       </span>
                       <div className="font-bold">
                         {formatCurrency(b.total_price)}
@@ -272,7 +261,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                     </div>
                     <div>
                       <span className="font-black uppercase text-[9px] text-white/40">
-                        Paiement
+                        {t.labelPayment}
                       </span>
                       <div className="font-bold">
                         {paymentMethodLabel(b.payment_method)}
@@ -289,11 +278,11 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         {uploadingId === b.id ? (
                           <>
                             <span className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                            <span>Envoi en cours...</span>
+                            <span>{t.uploadReceiptLoading}</span>
                           </>
                         ) : (
                           <>
-                            <span>Envoyer mon reçu</span>
+                            <span>{t.uploadReceiptCta}</span>
                             <span>📎</span>
                           </>
                         )}
@@ -313,9 +302,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                       <div className="text-[10px] text-white/50 leading-snug mt-1">
                         {b.payment_method === 'BARIDIMOB' && (
                           <>
-                            <p>
-                              Effectuez un virement BaridiMob / CCP vers :
-                            </p>
+                            <p>{t.paymentInfoIntroBaridi}</p>
                             <p className="font-semibold">
                               Titulaire : {ccp.accountName}
                             </p>
@@ -327,7 +314,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                         {b.payment_method === 'RIB' && (
                           <>
-                            <p>Effectuez un virement bancaire vers :</p>
+                            <p>{t.paymentInfoIntroRib}</p>
                             <p className="font-semibold">
                               Titulaire : {rib.accountName}
                             </p>
@@ -342,7 +329,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                         {b.payment_method === 'PAYPAL' && (
                           <>
-                            <p>Payer via PayPal à cette adresse :</p>
+                            <p>{t.paymentInfoIntroPaypal}</p>
                             <p className="font-semibold break-all">
                               {paypal.email}
                             </p>
@@ -350,8 +337,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                         )}
 
                         <p className="mt-1">
-                          Puis uploadez une capture d&apos;écran ou un reçu PDF
-                          ci-dessus.
+                          {t.paymentInfoThenUpload}
                         </p>
                       </div>
                     </>
@@ -359,14 +345,13 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
 
                   {!canUploadProof && b.status === 'PENDING_APPROVAL' && (
                     <p className="text-[10px] text-white/40 leading-snug">
-                      Attendez que l&apos;hôte accepte votre demande avant de
-                      payer ou d&apos;envoyer un reçu.
+                      {t.waitHostBeforeProof}
                     </p>
                   )}
 
                   {!canUploadProof && b.status === 'PAID' && (
                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em]">
-                      Paiement validé
+                      {t.paidLabel}
                     </p>
                   )}
                 </div>
