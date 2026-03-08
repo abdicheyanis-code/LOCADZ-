@@ -1,23 +1,48 @@
 import { Category } from './types';
 
+// 🎨 Couleurs par catégorie - utilisées dans toute l'app
+export const CATEGORY_COLORS: Record<string, { primary: string; secondary: string; gradient: string }> = {
+  trending: {
+    primary: '#ef4444',
+    secondary: '#f97316',
+    gradient: 'from-red-500 via-orange-500 to-amber-500',
+  },
+  beachfront: {
+    primary: '#06b6d4',
+    secondary: '#0ea5e9',
+    gradient: 'from-cyan-400 via-sky-500 to-blue-500',
+  },
+  cabins: {
+    primary: '#10b981',
+    secondary: '#059669',
+    gradient: 'from-emerald-400 via-green-500 to-teal-600',
+  },
+  sahara: {
+    primary: '#f59e0b',
+    secondary: '#d97706',
+    gradient: 'from-amber-400 via-orange-500 to-yellow-600',
+  },
+  city: {
+    primary: '#8b5cf6',
+    secondary: '#a855f7',
+    gradient: 'from-violet-500 via-purple-500 to-fuchsia-500',
+  },
+};
+
 export const CATEGORIES: Category[] = [
   {
     id: 'trending',
     label: 'Tendances',
     icon: '🔥',
     background_image:
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200&auto=format&fit=crop',
-    background_video:
-      'https://cdn.pixabay.com/video/2021/04/12/70796-537442111_tiny.mp4',
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=1200&auto=format&fit=crop',
   },
   {
     id: 'beachfront',
     label: 'Bord de mer',
-    icon: '🏖️',
+    icon: '🌊',
     background_image:
-      'https://images.unsplash.com/photo-1499793983690-e29da59ef1c2?q=80&w=1200&auto=format&fit=crop',
-    background_video:
-      'https://cdn.pixabay.com/video/2023/05/29/164923-831416801_tiny.mp4',
+      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop',
   },
   {
     id: 'cabins',
@@ -25,17 +50,20 @@ export const CATEGORIES: Category[] = [
     icon: '🏔️',
     background_image:
       'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop',
-    background_video:
-      'https://cdn.pixabay.com/video/2021/09/01/87102-595306351_tiny.mp4',
   },
   {
     id: 'sahara',
     label: 'Sahara',
     icon: '🏜️',
     background_image:
-      'https://images.unsplash.com/photo-1506371301032-db63542267ad?auto=format&fit=crop&q=80&w=1200',
-    background_video:
-      'https://cdn.pixabay.com/video/2020/07/04/44122-438905202_tiny.mp4',
+      'https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=1200&auto=format&fit=crop',
+  },
+  {
+    id: 'city',
+    label: 'Ville',
+    icon: '🌃',
+    background_image:
+      'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=1200&auto=format&fit=crop',
   },
 ];
 
@@ -54,23 +82,17 @@ export const ALGERIAN_BANKS = [
   { id: 'ABC', name: 'Arab Banking Corporation (ABC)' },
 ];
 
-/**
- * Coordonnées de paiement de la PLATEFORME LOCA DZ
- * → Ce sont tes comptes personnels / business où les voyageurs envoient l'argent.
- * Remplace les valeurs ci‑dessous par tes vrais numéros.
- */
 export const PLATFORM_PAYOUT = {
   ccp: {
     accountName: 'TON NOM COMPLET',
-    accountNumber: '00000000000000000000', // 20 chiffres RIP CCP
+    accountNumber: '00000000000000000000',
   },
   rib: {
     accountName: 'TON NOM COMPLET',
-    bankName: "Banque Extérieure d'Algérie (BEA)", // par ex.
-    accountNumber: '00000000000000000000', // 20 chiffres RIB
+    bankName: "Banque Extérieure d'Algérie (BEA)",
+    accountNumber: '00000000000000000000',
   },
   paypal: {
-    // Adresse PayPal vers laquelle les voyageurs envoient l’argent
     email: 'loca.dz@hotmail.com',
   },
 } as const;
