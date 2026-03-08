@@ -49,6 +49,8 @@ const AUTH_TRANSLATIONS: Record<AppLanguage, any> = {
       "J'accepte les Conditions Générales d'Utilisation et la Politique de Confidentialité LOCA DZ.",
     termsLink: 'Lire les conditions',
     termsRequired: 'Vous devez accepter les conditions pour créer un compte.',
+    welcomeTitle: 'Bienvenue',
+    welcomeSubtitle: 'Accès autorisé',
   },
   en: {
     portal: 'LOCADZ Member Portal',
@@ -83,10 +85,11 @@ const AUTH_TRANSLATIONS: Record<AppLanguage, any> = {
     forgotSuccess: 'Password reset email sent. Check your inbox.',
     forgotError: 'Error while sending reset email.',
     loginSuccess: 'Login successful.',
-    termsLabel:
-      'I accept LOCA DZ Terms of Use and Privacy Policy.',
+    termsLabel: 'I accept LOCA DZ Terms of Use and Privacy Policy.',
     termsLink: 'Read terms',
     termsRequired: 'You must accept the terms to create an account.',
+    welcomeTitle: 'Welcome',
+    welcomeSubtitle: 'Access granted',
   },
   ar: {
     portal: 'بوابة أعضاء لوكادز',
@@ -117,90 +120,100 @@ const AUTH_TRANSLATIONS: Record<AppLanguage, any> = {
       'تم إرسال بريد تأكيد. اضغط على الرابط لتفعيل الحساب ثم قم بتسجيل الدخول.',
     cloudError: 'خطأ في الاتصال بسحابة Supabase.',
     forgotPassword: 'نسيت كلمة المرور ؟',
-    forgotSuccess:
-      'تم إرسال بريد لإعادة تعيين كلمة المرور. تحقق من بريدك.',
+    forgotSuccess: 'تم إرسال بريد لإعادة تعيين كلمة المرور. تحقق من بريدك.',
     forgotError: 'خطأ أثناء إرسال بريد إعادة التعيين.',
     loginSuccess: 'تم تسجيل الدخول بنجاح.',
-    termsLabel:
-      'أوافق على شروط الاستخدام وسياسة الخصوصية الخاصة بمنصة لوكادز.',
+    termsLabel: 'أوافق على شروط الاستخدام وسياسة الخصوصية الخاصة بمنصة لوكادز.',
     termsLink: 'قراءة الشروط',
     termsRequired: 'يجب عليك قبول الشروط لإنشاء حساب.',
+    welcomeTitle: 'مرحباً',
+    welcomeSubtitle: 'تم السماح بالدخول',
   },
 };
 
-// 🌟 Composant Particules animées
-const ParticleField: React.FC = () => {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(30)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-white rounded-full opacity-20"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animation: `float ${5 + Math.random() * 10}s linear infinite`,
-            animationDelay: `${Math.random() * 5}s`,
-          }}
-        />
-      ))}
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0) translateX(0); }
-          25% { transform: translateY(-20px) translateX(10px); }
-          50% { transform: translateY(-40px) translateX(-10px); }
-          75% { transform: translateY(-20px) translateX(5px); }
-        }
-      `}</style>
-    </div>
-  );
+// 🎨 CSS Keyframes injectés globalement (une seule fois)
+const injectGlobalStyles = () => {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('locadz-auth-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'locadz-auth-styles';
+  style.textContent = `
+    @keyframes locadz-float {
+      0%, 100% { transform: translateY(0px) scale(1); opacity: 0.3; }
+      50% { transform: translateY(-20px) scale(1.1); opacity: 0.6; }
+    }
+    @keyframes locadz-glow {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.05); }
+    }
+    @keyframes locadz-shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes locadz-success-ring {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    @keyframes locadz-success-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    @keyframes locadz-fade-in {
+      0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes locadz-shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-5px); }
+      40%, 80% { transform: translateX(5px); }
+    }
+    .locadz-animate-float { animation: locadz-float 6s ease-in-out infinite; }
+    .locadz-animate-glow { animation: locadz-glow 4s ease-in-out infinite; }
+    .locadz-animate-shimmer { animation: locadz-shimmer 2s ease-in-out infinite; }
+    .locadz-animate-fade-in { animation: locadz-fade-in 0.5s ease-out forwards; }
+    .locadz-animate-shake { animation: locadz-shake 0.4s ease-in-out; }
+  `;
+  document.head.appendChild(style);
 };
 
-// 🔥 Composant Portail de succès
-const SuccessPortal: React.FC = () => {
+// 🌟 Portail de succès épuré et fluide
+const SuccessPortal: React.FC<{ language: AppLanguage }> = ({ language }) => {
+  const t = AUTH_TRANSLATIONS[language];
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
-      {/* Fond gradient animé */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 animate-pulse" />
-      
-      {/* Cercles concentriques */}
-      <div className="relative">
-        <div className="w-96 h-96 rounded-full border-4 border-white/30 animate-[ping_1.5s_ease-out_infinite]" />
-        <div className="absolute inset-0 w-96 h-96 rounded-full border-4 border-white/20 animate-[ping_2s_ease-out_infinite]" 
-             style={{ animationDelay: '0.3s' }} />
-        <div className="absolute inset-0 w-96 h-96 rounded-full border-4 border-white/10 animate-[ping_2.5s_ease-out_infinite]" 
-             style={{ animationDelay: '0.6s' }} />
-        
-        {/* Centre brillant */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-32 h-32 rounded-full bg-white/90 shadow-[0_0_100px_rgba(255,255,255,0.8)] flex flex-col items-center justify-center animate-[spin_3s_linear_infinite]">
-            <div className="text-center">
-              <div className="text-4xl mb-2">✨</div>
-              <div className="text-xs font-black text-indigo-600 tracking-widest">WELCOME</div>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
+      {/* Cercles qui s'expandent */}
+      <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+        {[...Array(3)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full border-2 border-white/30"
+            style={{
+              width: '200px',
+              height: '200px',
+              animation: `locadz-success-ring 2s ease-out infinite`,
+              animationDelay: `${i * 0.3}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Centre avec icône */}
+      <div
+        className="relative z-10 flex flex-col items-center gap-4"
+        style={{ animation: 'locadz-success-pulse 1s ease-in-out infinite' }}
+      >
+        <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-xl flex items-center justify-center shadow-2xl">
+          <span className="text-5xl">✓</span>
+        </div>
+        <div className="text-center">
+          <h2 className="text-2xl font-black text-white tracking-wide">
+            {t.welcomeTitle}
+          </h2>
+          <p className="text-sm text-white/80 mt-1">{t.welcomeSubtitle}</p>
         </div>
       </div>
-      
-      {/* Particules de lumière */}
-      {[...Array(20)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-2 h-2 bg-white rounded-full animate-[sparkle_1s_ease-out_infinite]"
-          style={{
-            left: `${50 + (Math.random() - 0.5) * 60}%`,
-            top: `${50 + (Math.random() - 0.5) * 60}%`,
-            animationDelay: `${Math.random() * 1}s`,
-          }}
-        />
-      ))}
-      
-      <style jsx>{`
-        @keyframes sparkle {
-          0%, 100% { opacity: 0; transform: scale(0); }
-          50% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
     </div>
   );
 };
@@ -222,29 +235,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isPortal, setIsPortal] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   const t = AUTH_TRANSLATIONS[language];
   const isRTL = language === 'ar';
   const { notify } = useNotification();
 
+  // Injection des styles au montage
+  useEffect(() => {
+    injectGlobalStyles();
+  }, []);
+
+  // Animation d'entrée/sortie
   useEffect(() => {
     if (isOpen) {
-      // Animation d'entrée
-      setTimeout(() => setModalVisible(true), 50);
+      requestAnimationFrame(() => setIsVisible(true));
     } else {
-      setModalVisible(false);
-      setIsLogin(true);
-      setEmail('');
-      setFullName('');
-      setPhone('');
-      setRole('TRAVELER');
-      setPassword('');
-      setAcceptedTerms(false);
-      setError('');
-      setInfo('');
-      setIsLoading(false);
-      setIsPortal(false);
+      setIsVisible(false);
+      // Reset des champs
+      setTimeout(() => {
+        setIsLogin(true);
+        setEmail('');
+        setFullName('');
+        setPhone('');
+        setRole('TRAVELER');
+        setPassword('');
+        setAcceptedTerms(false);
+        setError('');
+        setInfo('');
+        setIsLoading(false);
+        setIsPortal(false);
+      }, 300);
     }
   }, [isOpen]);
 
@@ -260,7 +281,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onSuccess(user);
       onClose();
       setIsPortal(false);
-    }, 2000);
+    }, 1800);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -369,405 +390,408 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isVisible) return null;
 
   return (
     <>
-      {/* 🌟 Animation PORTAIL de succès */}
-      {isPortal && <SuccessPortal />}
+      {/* Portail de succès */}
+      {isPortal && <SuccessPortal language={language} />}
 
-      {/* Fond avec effet blur progressif */}
+      {/* Overlay */}
       <div
-        className={`fixed inset-0 z-[150] transition-all duration-700 ${
-          modalVisible ? 'backdrop-blur-xl bg-black/60' : 'backdrop-blur-none bg-black/0'
+        className={`fixed inset-0 z-[150] transition-all duration-500 ${
+          isVisible
+            ? 'bg-black/70 backdrop-blur-md'
+            : 'bg-black/0 backdrop-blur-none'
         }`}
+        onClick={onClose}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
-        {/* Gradient animé d'arrière-plan */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-1/2 -left-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-br from-indigo-600/30 via-purple-600/20 to-transparent blur-3xl animate-[pulse_8s_ease-in-out_infinite]" />
-          <div className="absolute -bottom-1/2 -right-1/4 w-[800px] h-[800px] rounded-full bg-gradient-to-tl from-pink-600/30 via-fuchsia-600/20 to-transparent blur-3xl animate-[pulse_10s_ease-in-out_infinite]" 
-               style={{ animationDelay: '2s' }} />
-        </div>
+        {/* Orbes lumineux en arrière-plan */}
+        <div
+          className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/20 blur-3xl locadz-animate-glow"
+          style={{ animationDelay: '0s' }}
+        />
+        <div
+          className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-fuchsia-600/20 blur-3xl locadz-animate-glow"
+          style={{ animationDelay: '2s' }}
+        />
+      </div>
 
-        {/* Particules flottantes */}
-        <ParticleField />
+      {/* Modal */}
+      <div
+        className={`fixed inset-0 z-[160] flex items-center justify-center p-4 pointer-events-none`}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        <div
+          className={`relative w-full max-w-4xl max-h-[90vh] overflow-auto pointer-events-auto transition-all duration-500 ${
+            isVisible
+              ? 'opacity-100 scale-100 translate-y-0'
+              : 'opacity-0 scale-95 translate-y-8'
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Container principal */}
+          <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950/90 to-slate-900 rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+            {/* Bouton fermer */}
+            <button
+              onClick={onClose}
+              className={`absolute top-4 ${
+                isRTL ? 'left-4' : 'right-4'
+              } z-20 w-10 h-10 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all duration-300 hover:rotate-90`}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
 
-        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-          <div
-            className={`w-full max-w-5xl transition-all duration-700 ${
-              modalVisible
-                ? 'opacity-100 scale-100 translate-y-0'
-                : 'opacity-0 scale-95 translate-y-8'
-            }`}
-          >
-            {/* Container principal avec effet glassmorphism */}
-            <div className="relative bg-gradient-to-br from-slate-900/90 via-indigo-950/80 to-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 overflow-hidden">
-              
-              {/* Halo lumineux au survol */}
-              <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-1000 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 blur-xl" />
+            <div className="flex flex-col md:flex-row">
+              {/* Panneau gauche - Branding */}
+              <div className="hidden md:flex md:w-[40%] relative bg-gradient-to-br from-indigo-600 via-purple-700 to-fuchsia-800 p-10 flex-col justify-center overflow-hidden">
+                {/* Effet de lumière */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
+
+                {/* Particules subtiles */}
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-2 h-2 rounded-full bg-white/30 locadz-animate-float"
+                    style={{
+                      left: `${15 + Math.random() * 70}%`,
+                      top: `${10 + Math.random() * 80}%`,
+                      animationDelay: `${i * 0.5}s`,
+                      animationDuration: `${4 + Math.random() * 4}s`,
+                    }}
+                  />
+                ))}
+
+                <div className="relative z-10 space-y-6">
+                  {/* Badge logo */}
+                  <div className="inline-flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
+                    <LocadzLogo className="w-8 h-8" />
+                    <span className="text-xs font-bold text-white/80 uppercase tracking-wider">
+                      Portal
+                    </span>
+                  </div>
+
+                  <h2 className="text-3xl font-black text-white leading-tight">
+                    {t.portal}
+                  </h2>
+
+                  <p className="text-sm text-white/70 leading-relaxed">
+                    {t.req}
+                  </p>
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap gap-2 pt-4">
+                    {['🔐 Secure', '⚡ Fast', '☁️ Cloud'].map((badge) => (
+                      <span
+                        key={badge}
+                        className="px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-medium text-white/90"
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
 
-              {/* Bouton fermer stylisé */}
-              <button
-                onClick={onClose}
-                className={`absolute top-6 ${
-                  isRTL ? 'left-6' : 'right-6'
-                } z-30 w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all hover:rotate-90 hover:scale-110 group`}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500 opacity-0 group-hover:opacity-20 blur transition-opacity" />
-              </button>
-
-              <div className="flex flex-col md:flex-row">
-                {/* Panneau gauche - Branding */}
-                <div className="hidden md:flex md:w-[42%] relative bg-gradient-to-br from-indigo-600 via-purple-700 to-fuchsia-900 p-12 flex-col justify-between overflow-hidden">
-                  {/* Effet de grille animée */}
-                  <div className="absolute inset-0 opacity-10">
-                    <div className="absolute inset-0" style={{
-                      backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-                      backgroundSize: '50px 50px',
-                      animation: 'grid-move 20s linear infinite'
-                    }} />
+              {/* Panneau droit - Formulaire */}
+              <div className="w-full md:w-[60%] p-8 md:p-10">
+                {/* Toggle Login/Register */}
+                <div className="relative bg-white/5 border border-white/10 p-1 rounded-2xl mb-8">
+                  {/* Indicateur glissant */}
+                  <div
+                    className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg transition-all duration-300 ease-out ${
+                      isLogin ? 'left-1' : 'left-[calc(50%+2px)]'
+                    }`}
+                  />
+                  <div className="relative flex">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(true);
+                        setError('');
+                        setInfo('');
+                      }}
+                      className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors duration-300 ${
+                        isLogin ? 'text-white' : 'text-white/40 hover:text-white/60'
+                      }`}
+                    >
+                      {t.member}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(false);
+                        setError('');
+                        setInfo('');
+                      }}
+                      className={`flex-1 py-3 rounded-xl text-sm font-bold transition-colors duration-300 ${
+                        !isLogin ? 'text-white' : 'text-white/40 hover:text-white/60'
+                      }`}
+                    >
+                      {t.join}
+                    </button>
                   </div>
-
-                  {/* Logo et titre */}
-                  <div className="relative z-10 space-y-6">
-                    <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
-                      <LocadzLogo className="w-10 h-10" />
-                      <div className="text-left">
-                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/80">
-                          Secure Portal
-                        </div>
-                        <div className="text-[8px] font-bold text-white/50">
-                          {t.req}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h2 className="text-4xl font-black tracking-tight text-white leading-tight">
-                        Bienvenue dans<br />
-                        l'extraordinaire
-                      </h2>
-                      <p className="text-sm text-white/70 leading-relaxed max-w-sm">
-                        Accédez à votre espace personnel sécurisé. Gérez vos réservations, 
-                        vos paiements et profitez d'une expérience premium.
-                      </p>
-                    </div>
-
-                    {/* Badges technos */}
-                    <div className="flex flex-wrap gap-2">
-                      {['🔒 Sécurisé', '⚡ Rapide', '☁️ Cloud', '🎯 Smart AI'].map((badge) => (
-                        <span key={badge} className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-[10px] font-bold text-white/90">
-                          {badge}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Orbe lumineux animé */}
-                  <div className="absolute bottom-0 right-0 w-64 h-64 rounded-full bg-gradient-to-tl from-white/20 to-transparent blur-3xl animate-pulse" />
-                  
-                  <style jsx>{`
-                    @keyframes grid-move {
-                      0% { transform: translate(0, 0); }
-                      100% { transform: translate(50px, 50px); }
-                    }
-                  `}</style>
                 </div>
 
-                {/* Panneau droit - Formulaire */}
-                <div className="w-full md:w-[58%] p-8 md:p-12">
-                  {/* Switch Login/Register avec effet glissant */}
-                  <div className="relative bg-white/5 border border-white/10 p-1.5 rounded-2xl mb-8 shadow-inner">
-                    <div
-                      className={`absolute top-1.5 bottom-1.5 w-[calc(50%-0.375rem)] bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg transition-all duration-300 ${
-                        isLogin ? 'left-1.5' : 'left-[calc(50%+0.375rem)]'
-                      }`}
-                    />
-                    <div className="relative flex">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsLogin(true);
-                          setError('');
-                          setInfo('');
-                        }}
-                        className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${
-                          isLogin ? 'text-white' : 'text-white/40 hover:text-white/70'
-                        }`}
-                      >
-                        {t.member}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsLogin(false);
-                          setError('');
-                          setInfo('');
-                        }}
-                        className={`flex-1 py-3 rounded-xl text-xs font-black uppercase transition-all ${
-                          !isLogin ? 'text-white' : 'text-white/40 hover:text-white/70'
-                        }`}
-                      >
-                        {t.join}
-                      </button>
+                {/* Formulaire */}
+                <form onSubmit={handleFormSubmit} className="space-y-5">
+                  {/* Nom (inscription) */}
+                  {!isLogin && (
+                    <div className="space-y-2 locadz-animate-fade-in">
+                      <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider ml-1">
+                        {t.name}
+                      </label>
+                      <input
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all outline-none text-white placeholder:text-white/30"
+                        placeholder="Nom complet"
+                      />
                     </div>
+                  )}
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider ml-1">
+                      {t.email}
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className={`w-full px-4 py-3 bg-white/5 border rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all outline-none text-white placeholder:text-white/30 ${
+                        error === t.invalidEmail
+                          ? 'border-rose-500 locadz-animate-shake'
+                          : 'border-white/10'
+                      }`}
+                      placeholder="votre@email.com"
+                    />
                   </div>
 
-                  {/* Formulaire */}
-                  <form onSubmit={handleFormSubmit} className="space-y-5">
-                    {/* Champ Nom (inscription uniquement) */}
-                    {!isLogin && (
-                      <div className="group space-y-2">
-                        <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 group-focus-within:animate-pulse" />
-                          {t.name}
-                        </label>
-                        <input
-                          type="text"
-                          value={fullName}
-                          onChange={e => setFullName(e.target.value)}
-                          required
-                          className="w-full px-5 py-3.5 bg-black/30 border border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none text-white placeholder:text-white/30 text-sm font-medium hover:border-white/20"
-                          placeholder="John Doe"
-                        />
-                      </div>
-                    )}
+                  {/* Mot de passe */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider ml-1">
+                      {t.password}
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all outline-none text-white placeholder:text-white/30"
+                      placeholder={t.passwordPlaceholder}
+                    />
+                  </div>
 
-                    {/* Email */}
-                    <div className="group space-y-2">
-                      <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 group-focus-within:animate-pulse" />
-                        {t.email}
+                  {/* Mot de passe oublié */}
+                  {isLogin && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-xs font-medium text-indigo-400 hover:text-indigo-300 underline-offset-4 hover:underline transition-colors"
+                      >
+                        {t.forgotPassword}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Téléphone (inscription) */}
+                  {!isLogin && (
+                    <div className="space-y-2 locadz-animate-fade-in">
+                      <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider ml-1">
+                        {t.phone}
                       </label>
                       <input
-                        type="email"
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                         required
-                        className={`w-full px-5 py-3.5 bg-black/30 border rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none text-white placeholder:text-white/30 text-sm font-medium hover:border-white/20 ${
-                          error === t.invalidEmail ? 'border-rose-500 animate-shake' : 'border-white/10'
+                        maxLength={10}
+                        className={`w-full px-4 py-3 bg-white/5 border rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 transition-all outline-none text-white placeholder:text-white/30 ${
+                          error === t.invalidPhone
+                            ? 'border-rose-500 locadz-animate-shake'
+                            : 'border-white/10'
                         }`}
-                        placeholder="john@example.com"
+                        placeholder={t.phoneHint}
                       />
                     </div>
+                  )}
 
-                    {/* Mot de passe */}
-                    <div className="group space-y-2">
-                      <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 group-focus-within:animate-pulse" />
-                        {t.password}
+                  {/* Rôle (inscription) */}
+                  {!isLogin && (
+                    <div className="space-y-3 locadz-animate-fade-in">
+                      <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider ml-1">
+                        {t.role}
                       </label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        required
-                        minLength={6}
-                        className="w-full px-5 py-3.5 bg-black/30 border border-white/10 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none text-white placeholder:text-white/30 text-sm font-medium hover:border-white/20"
-                        placeholder="••••••••"
-                      />
-                    </div>
-
-                    {/* Lien mot de passe oublié */}
-                    {isLogin && (
-                      <div className="flex justify-end">
+                      <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
-                          onClick={handleForgotPassword}
-                          className="text-xs font-bold text-indigo-400 hover:text-indigo-300 underline transition-colors"
+                          onClick={() => setRole('TRAVELER')}
+                          className={`group relative p-4 rounded-xl border-2 transition-all duration-300 ${
+                            role === 'TRAVELER'
+                              ? 'border-indigo-500 bg-indigo-500/20 shadow-lg shadow-indigo-500/20'
+                              : 'border-white/10 bg-white/5 hover:border-white/20'
+                          }`}
                         >
-                          {t.forgotPassword}
+                          <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">
+                            🎒
+                          </div>
+                          <div className="text-xs font-bold text-white uppercase">
+                            {t.traveler}
+                          </div>
+                          {role === 'TRAVELER' && (
+                            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setRole('HOST')}
+                          className={`group relative p-4 rounded-xl border-2 transition-all duration-300 ${
+                            role === 'HOST'
+                              ? 'border-indigo-500 bg-indigo-500/20 shadow-lg shadow-indigo-500/20'
+                              : 'border-white/10 bg-white/5 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">
+                            🗝️
+                          </div>
+                          <div className="text-xs font-bold text-white uppercase">
+                            {t.host}
+                          </div>
+                          {role === 'HOST' && (
+                            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                          )}
                         </button>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Téléphone (inscription) */}
-                    {!isLogin && (
-                      <div className="group space-y-2">
-                        <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 group-focus-within:animate-pulse" />
-                          {t.phone}
-                        </label>
-                        <input
-                          type="tel"
-                          value={phone}
-                          onChange={e => setPhone(e.target.value)}
-                          required
-                          maxLength={10}
-                          className={`w-full px-5 py-3.5 bg-black/30 border rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all outline-none text-white placeholder:text-white/30 text-sm font-medium hover:border-white/20 ${
-                            error === t.invalidPhone ? 'border-rose-500 animate-shake' : 'border-white/10'
-                          }`}
-                          placeholder={t.phoneHint}
-                        />
-                      </div>
-                    )}
+                  {/* Conditions (inscription) */}
+                  {!isLogin && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10 locadz-animate-fade-in">
+                      <input
+                        type="checkbox"
+                        id="locadz-terms"
+                        checked={acceptedTerms}
+                        onChange={(e) => setAcceptedTerms(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 rounded border-white/30 bg-white/10 text-indigo-500 focus:ring-2 focus:ring-indigo-500/50"
+                      />
+                      <label
+                        htmlFor="locadz-terms"
+                        className="text-xs text-white/70 leading-relaxed cursor-pointer"
+                      >
+                        {t.termsLabel}{' '}
+                        <a
+                          href="/about"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          {t.termsLink}
+                        </a>
+                      </label>
+                    </div>
+                  )}
 
-                    {/* Sélection du rôle (inscription) */}
-                    {!isLogin && (
-                      <div className="space-y-3">
-                        <label className="text-xs font-bold uppercase text-indigo-300 tracking-wider flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                          {t.role}
-                        </label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setRole('TRAVELER')}
-                            className={`group relative p-5 rounded-2xl border-2 transition-all ${
-                              role === 'TRAVELER'
-                                ? 'border-indigo-500 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 shadow-lg shadow-indigo-500/30'
-                                : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                            }`}
+                  {/* Message d'erreur */}
+                  {error && (
+                    <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 locadz-animate-fade-in">
+                      <p className="text-rose-300 text-sm font-medium text-center">
+                        ⚠️ {error}
+                      </p>
+                      {error === t.emailExists && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsLogin(true);
+                            setError('');
+                          }}
+                          className="mt-2 w-full text-xs font-bold text-rose-200 underline"
+                        >
+                          {t.loginInstead}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Message d'info */}
+                  {info && (
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 locadz-animate-fade-in">
+                      <p className="text-emerald-300 text-sm font-medium text-center">
+                        ✅ {info}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bouton Submit */}
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="relative w-full py-4 rounded-xl font-bold text-white uppercase tracking-wider overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    {/* Fond gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600" />
+
+                    {/* Effet shimmer */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent locadz-animate-shimmer" />
+                    </div>
+
+                    {/* Contenu */}
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{isLogin ? t.access : t.joinBtn}</span>
+                          <svg
+                            className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                           >
-                            <div className={`text-4xl mb-2 transition-transform group-hover:scale-110 ${
-                              role === 'TRAVELER' ? 'animate-bounce' : ''
-                            }`}>
-                              🎒
-                            </div>
-                            <div className="text-xs font-black uppercase tracking-wider text-white">
-                              {t.traveler}
-                            </div>
-                            {role === 'TRAVELER' && (
-                              <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 animate-pulse" />
-                            )}
-                          </button>
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M13 7l5 5m0 0l-5 5m5-5H6"
+                            />
+                          </svg>
+                        </>
+                      )}
+                    </span>
 
-                          <button
-                            type="button"
-                            onClick={() => setRole('HOST')}
-                            className={`group relative p-5 rounded-2xl border-2 transition-all ${
-                              role === 'HOST'
-                                ? 'border-indigo-500 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 shadow-lg shadow-indigo-500/30'
-                                : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                            }`}
-                          >
-                            <div className={`text-4xl mb-2 transition-transform group-hover:scale-110 ${
-                              role === 'HOST' ? 'animate-bounce' : ''
-                            }`}>
-                              🗝️
-                            </div>
-                            <div className="text-xs font-black uppercase tracking-wider text-white">
-                              {t.host}
-                            </div>
-                            {role === 'HOST' && (
-                              <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gradient-to-r from-indigo-400 to-purple-400 animate-pulse" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Conditions (inscription) */}
-                    {!isLogin && (
-                      <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
-                        <input
-                          type="checkbox"
-                          id="locadz-terms"
-                          checked={acceptedTerms}
-                          onChange={e => setAcceptedTerms(e.target.checked)}
-                          className="mt-0.5 w-5 h-5 rounded border-2 border-white/30 bg-black/30 text-indigo-500 focus:ring-2 focus:ring-indigo-500/50 transition-all cursor-pointer"
-                        />
-                        <label htmlFor="locadz-terms" className="text-xs text-gray-300 leading-relaxed cursor-pointer">
-                          {t.termsLabel}{' '}
-                          <a
-                            href="/about"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="underline text-indigo-300 hover:text-indigo-200 font-semibold"
-                          >
-                            {t.termsLink}
-                          </a>
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Messages d'erreur/info */}
-                    {error && (
-                      <div className="p-4 rounded-xl border-2 bg-rose-500/10 border-rose-400/40 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
-                        <p className="text-rose-300 text-xs font-bold leading-relaxed text-center">
-                          ⚠️ {error}
-                        </p>
-                        {error === t.emailExists && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsLogin(true);
-                              setError('');
-                              setInfo('');
-                            }}
-                            className="mt-3 w-full text-xs font-black text-rose-200 underline uppercase tracking-wider hover:text-rose-100"
-                          >
-                            {t.loginInstead}
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    {info && (
-                      <div className="p-4 rounded-xl border-2 bg-emerald-500/10 border-emerald-400/40 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
-                        <p className="text-emerald-300 text-xs font-bold leading-relaxed text-center">
-                          ✅ {info}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Bouton Submit avec effet holographique */}
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="relative w-full py-4 mt-2 rounded-2xl font-black uppercase tracking-widest text-white overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                      {/* Fond gradient animé */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 transition-all" />
-                      <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
-                      {/* Effet de brillance qui passe */}
-                      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                      
-                      {/* Contenu */}
-                      <span className="relative z-10 flex items-center justify-center gap-3 text-sm">
-                        {isLoading ? (
-                          <>
-                            <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-                            <span>TRAITEMENT...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>{isLogin ? t.access : t.joinBtn}</span>
-                            <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                          </>
-                        )}
-                      </span>
-
-                      {/* Ombre portée animée */}
-                      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity -z-10" />
-                    </button>
-                  </form>
-                </div>
+                    {/* Ombre */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-xl blur opacity-40 group-hover:opacity-60 transition-opacity -z-10" />
+                  </button>
+                </form>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          75% { transform: translateX(5px); }
-        }
-        .animate-shake {
-          animation: shake 0.3s ease-in-out;
-        }
-      `}</style>
     </>
   );
 };
