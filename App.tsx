@@ -10,11 +10,11 @@ import { AuthModal } from './components/AuthModal';
 import { AuthLanding } from './components/AuthLanding';
 import { AdminDashboard } from './components/AdminDashboard';
 import { HostDashboard } from './components/HostDashboard';
-import { TravelerDashboard } from './components/TravelerDashboard'; // ✅ AJOUTÉ
+import { TravelerDashboard } from './components/TravelerDashboard';
 import { AboutUs } from './components/AboutUs';
 import { ProfileSettings } from './components/ProfileSettings';
 import { LegalPages } from './components/LegalPages';
-import { CATEGORIES } from './constants';
+import { CATEGORIES, CATEGORY_COLORS } from './constants';
 import { Property, UserRole, UserProfile, AppLanguage } from './types';
 import { authService } from './services/authService';
 import { propertyService } from './services/propertyService';
@@ -100,7 +100,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Charger propriétés + favoris (UNIQUEMENT données réelles)
+  // Charger propriétés + favoris
   const refreshData = async () => {
     const session = authService.getSession();
     setIsLoading(true);
@@ -171,19 +171,9 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const getAmbientColor = (catId: string) => {
-    switch (catId) {
-      case 'trending':
-        return '#ef4444';
-      case 'beachfront':
-        return '#06b6d4';
-      case 'cabins':
-        return '#10b981';
-      case 'sahara':
-        return '#f59e0b';
-      default:
-        return '#6366f1';
-    }
+  // 🎨 Couleurs dynamiques par catégorie
+  const getAmbientColor = (catId: string): string => {
+    return CATEGORY_COLORS[catId]?.primary || '#6366f1';
   };
 
   // Synchroniser activeView avec l'URL
@@ -249,7 +239,7 @@ const App: React.FC = () => {
     refreshData();
   };
 
-  // ✅ Fonction pour naviguer vers une propriété depuis TravelerDashboard
+  // Fonction pour naviguer vers une propriété depuis TravelerDashboard
   const handleNavigateToProperty = (propertyId: string) => {
     const prop = properties.find(p => p.id === propertyId);
     if (prop) {
@@ -261,7 +251,7 @@ const App: React.FC = () => {
     }
   };
 
-  // ✅ Fonction de déconnexion
+  // Fonction de déconnexion
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
@@ -280,7 +270,7 @@ const App: React.FC = () => {
     return result;
   }, [selectedCategory, properties, maxPrice, minRating]);
 
-  // ✅ Déterminer l'onglet initial du TravelerDashboard selon la vue active
+  // Déterminer l'onglet initial du TravelerDashboard selon la vue active
   const getTravelerInitialTab = (): 'home' | 'trips' | 'favorites' | 'profile' => {
     switch (activeView) {
       case 'BOOKINGS':
@@ -314,7 +304,7 @@ const App: React.FC = () => {
     );
   }
 
-  // ✅ Page spéciale : /about accessible même sans être connecté
+  // Page spéciale : /about accessible même sans être connecté
   if (!currentUser && activeView === 'ABOUT') {
     return (
       <div
@@ -324,12 +314,13 @@ const App: React.FC = () => {
         {/* BACKGROUND */}
         <div className="fixed inset-0 -z-10">
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 transition-all duration-1000"
             style={{
               background: `
-                radial-gradient(circle at 0% 0%, ${ambientColor}33, transparent 55%),
-                radial-gradient(circle at 100% 100%, ${ambientColor}44, transparent 55%),
-                linear-gradient(to bottom right, #020617, #020617, #020617)
+                radial-gradient(ellipse at 0% 0%, ${ambientColor}40, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, ${ambientColor}30, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, ${ambientColor}10, transparent 70%),
+                linear-gradient(to bottom right, #020617, #0a0a1a, #020617)
               `,
             }}
           />
@@ -384,52 +375,60 @@ const App: React.FC = () => {
       className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
       dir={language === 'ar' ? 'rtl' : 'ltr'}
     >
-      {/* BACKGROUND */}
+      {/* 🎨 BACKGROUND DYNAMIQUE SELON LA CATÉGORIE */}
       <div className="fixed inset-0 -z-10">
+        {/* Gradient principal avec couleur de catégorie */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 transition-all duration-1000 ease-in-out"
           style={{
             background: `
-              radial-gradient(circle at 0% 0%, ${ambientColor}33, transparent 55%),
-              radial-gradient(circle at 100% 100%, ${ambientColor}44, transparent 55%),
-              linear-gradient(to bottom right, #020617, #020617, #020617)
+              radial-gradient(ellipse at 0% 0%, ${ambientColor}40, transparent 50%),
+              radial-gradient(ellipse at 100% 100%, ${ambientColor}30, transparent 50%),
+              radial-gradient(ellipse at 50% 50%, ${ambientColor}10, transparent 70%),
+              linear-gradient(to bottom right, #020617, #0a0a1a, #020617)
             `,
           }}
         />
-        <div className="absolute inset-0 transition-opacity duration-[3000ms] ease-in-out mix-blend-screen">
-          {activeCategory.background_video ? (
-            <video
-              key={activeCategory.background_video}
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-full object-cover scale-110 blur-[6px] opacity-[0.18]"
-            >
-              <source
-                src={activeCategory.background_video}
-                type="video/mp4"
-              />
-            </video>
-          ) : (
-            <div
-              className="w-full h-full bg-cover bg-center scale-110 blur-[6px] opacity-[0.18] transition-all duration-[3000ms]"
-              style={{
-                backgroundImage: `url(${activeCategory.background_image})`,
-              }}
-            />
-          )}
+
+        {/* Image de fond avec flou */}
+        <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out mix-blend-overlay opacity-20">
+          <div
+            className="w-full h-full bg-cover bg-center scale-110 blur-2xl transition-all duration-1000"
+            style={{
+              backgroundImage: `url(${activeCategory.background_image})`,
+            }}
+          />
         </div>
+
+        {/* Orbe lumineux principal (suit la couleur) */}
         <div
-          className="absolute -top-40 -left-40 w-[55vw] h-[55vw] rounded-full blur-[140px] opacity-[0.35] animate-drift"
+          className="absolute -top-40 -left-40 w-[60vw] h-[60vw] rounded-full blur-[150px] opacity-40 transition-all duration-1000"
           style={{
             background: `radial-gradient(circle at 30% 30%, ${ambientColor}, transparent 70%)`,
           }}
         />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] rounded-full blur-[140px] opacity-[0.18] bg-violet-600/60" />
-        <div className="absolute top-1/3 left-[55%] w-[30vw] h-[30vw] rounded-full blur-[120px] opacity-[0.15] bg-sky-500/40" />
-        <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.18]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
+
+        {/* Orbe secondaire */}
+        <div
+          className="absolute bottom-[-20%] right-[-15%] w-[50vw] h-[50vw] rounded-full blur-[150px] opacity-25 transition-all duration-1000"
+          style={{
+            background: `radial-gradient(circle at 70% 70%, ${ambientColor}, transparent 70%)`,
+          }}
+        />
+
+        {/* Orbe central subtil */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] rounded-full blur-[180px] opacity-15 transition-all duration-1000"
+          style={{
+            background: ambientColor,
+          }}
+        />
+
+        {/* Grain texture */}
+        <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.15]" />
+
+        {/* Gradient overlay pour profondeur */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
       </div>
 
       {/* APP SHELL */}
@@ -497,32 +496,45 @@ const App: React.FC = () => {
             <main className="flex-1 transition-all duration-1000 pt-32 pb-40">
               {activeView === 'EXPLORE' && (
                 <div className="space-y-16 animate-in fade-in slide-in-from-bottom-20 duration-1000">
+                  {/* Header avec titre de catégorie */}
                   <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
                     <div className="flex flex-col gap-2 animate-in slide-in-from-left duration-[1200ms]">
                       <div className="flex items-center gap-6">
                         <div
-                          className="h-[1px] w-16 opacity-30"
+                          className="h-[2px] w-16 rounded-full transition-all duration-700"
                           style={{ backgroundColor: ambientColor }}
-                        ></div>
+                        />
                         <span
-                          className="text-[10px] font-black uppercase tracking-[0.8em] transition-colors duration-1000"
+                          className="text-[10px] font-black uppercase tracking-[0.8em] transition-colors duration-700"
                           style={{ color: ambientColor }}
                         >
-                          LOCADZ DZ COLLECTION
+                          LOCADZ COLLECTION
                         </span>
                       </div>
-                      <h1 className="text-6xl md:text-[10rem] font-black italic tracking-tighter leading-[0.8] uppercase select-none">
-                        {activeCategory.label}
+                      <h1 className="text-5xl md:text-[8rem] font-black italic tracking-tighter leading-[0.85] uppercase select-none">
+                        <span
+                          className="transition-colors duration-700"
+                          style={{ color: ambientColor }}
+                        >
+                          {activeCategory.label}
+                        </span>
                         <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/40 to-transparent">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/60 to-transparent">
                           Signature
                         </span>
                       </h1>
                     </div>
                   </div>
 
-                  <div className="sticky top-28 z-[100] px-4 md:px-0">
-                    <div className="max-w-4xl mx-auto bg-black/30 backdrop-blur-3xl border border-white/10 rounded-[4rem] p-2 shadow-[0_40px_100px_rgba(0,0,0,0.5)]">
+                  {/* Barre de catégories */}
+                  <div className="sticky top-24 z-[100] px-4 md:px-0">
+                    <div 
+                      className="max-w-4xl mx-auto backdrop-blur-2xl border rounded-[3rem] p-2 shadow-[0_30px_80px_rgba(0,0,0,0.5)] transition-all duration-700"
+                      style={{
+                        backgroundColor: `${ambientColor}10`,
+                        borderColor: `${ambientColor}30`,
+                      }}
+                    >
                       <Categories
                         selectedCategory={selectedCategory}
                         onSelect={setSelectedCategory}
@@ -532,6 +544,7 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Filtres et listings */}
                   <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
                     <FilterBar
                       maxPrice={maxPrice}
@@ -547,17 +560,17 @@ const App: React.FC = () => {
                       accentColor={ambientColor}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-12 gap-y-20 mt-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16 mt-12">
                       {filteredProperties.length > 0 ? (
                         filteredProperties.map((p, idx) => (
                           <div
                             key={p.id}
                             onClick={() => setSelectedProperty(p)}
-                            className={`animate-in fade-in zoom-in-95 duration-1000 ${
-                              idx % 2 === 1 ? 'md:mt-24' : ''
+                            className={`animate-in fade-in zoom-in-95 duration-700 ${
+                              idx % 2 === 1 ? 'md:mt-16' : ''
                             }`}
                             style={{
-                              animationDelay: `${idx * 150}ms`,
+                              animationDelay: `${idx * 100}ms`,
                             }}
                           >
                             <ListingCard
@@ -571,13 +584,17 @@ const App: React.FC = () => {
                           </div>
                         ))
                       ) : (
-                        <div className="col-span-full py-60 text-center flex flex-col items-center animate-in fade-in">
-                          <span className="text-9xl mb-8 opacity-10">
-                            🏜️
-                          </span>
-                          <h3 className="text-4xl font-black italic tracking-tighter uppercase opacity-30">
+                        <div className="col-span-full py-40 text-center flex flex-col items-center animate-in fade-in">
+                          <span className="text-8xl mb-6 opacity-20">🔍</span>
+                          <h3 
+                            className="text-3xl font-black italic tracking-tighter uppercase"
+                            style={{ color: `${ambientColor}60` }}
+                          >
                             Aucun Trésor Trouvé
                           </h3>
+                          <p className="text-white/40 mt-2 text-sm">
+                            Essayez une autre catégorie ou modifiez les filtres
+                          </p>
                         </div>
                       )}
                     </div>
@@ -590,7 +607,7 @@ const App: React.FC = () => {
                   <AdminDashboard currentUser={currentUser} />
                 )}
 
-                {/* ✅ VOYAGEUR : PROFILE, BOOKINGS, FAVORITES → TravelerDashboard */}
+                {/* VOYAGEUR : PROFILE, BOOKINGS, FAVORITES → TravelerDashboard */}
                 {(activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES') && 
                   currentUser && 
                   userRole === 'TRAVELER' && (
@@ -606,7 +623,7 @@ const App: React.FC = () => {
                   />
                 )}
 
-                {/* ✅ HÔTE : PROFILE → ProfileSettings (car son dashboard est HOST_DASH) */}
+                {/* HÔTE : PROFILE → ProfileSettings */}
                 {activeView === 'PROFILE' && currentUser && userRole === 'HOST' && (
                   <ProfileSettings
                     currentUser={currentUser}
