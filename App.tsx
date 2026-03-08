@@ -14,7 +14,6 @@ import { TravelerDashboard } from './components/TravelerDashboard'; // ✅ AJOUT
 import { AboutUs } from './components/AboutUs';
 import { ProfileSettings } from './components/ProfileSettings';
 import { LegalPages } from './components/LegalPages';
-import { BookingsView } from './components/BookingsView';
 import { CATEGORIES } from './constants';
 import { Property, UserRole, UserProfile, AppLanguage } from './types';
 import { authService } from './services/authService';
@@ -250,6 +249,26 @@ const App: React.FC = () => {
     refreshData();
   };
 
+  // ✅ Fonction pour naviguer vers une propriété depuis TravelerDashboard
+  const handleNavigateToProperty = (propertyId: string) => {
+    const prop = properties.find(p => p.id === propertyId);
+    if (prop) {
+      setSelectedProperty(prop);
+    } else {
+      propertyService.getById(propertyId).then(p => {
+        if (p) setSelectedProperty(p);
+      });
+    }
+  };
+
+  // ✅ Fonction de déconnexion
+  const handleLogout = () => {
+    authService.logout();
+    setCurrentUser(null);
+    setShowWelcome(true);
+    navigate('/');
+  };
+
   const filteredProperties = useMemo(() => {
     let result = properties;
     if (selectedCategory !== 'all' && selectedCategory !== 'trending') {
@@ -261,16 +280,17 @@ const App: React.FC = () => {
     return result;
   }, [selectedCategory, properties, maxPrice, minRating]);
 
-  // ✅ Fonction pour naviguer vers une propriété depuis TravelerDashboard
-  const handleNavigateToProperty = (propertyId: string) => {
-    const prop = properties.find(p => p.id === propertyId);
-    if (prop) {
-      setSelectedProperty(prop);
-    } else {
-      // Si pas trouvée dans la liste, on la charge
-      propertyService.getById(propertyId).then(p => {
-        if (p) setSelectedProperty(p);
-      });
+  // ✅ Déterminer l'onglet initial du TravelerDashboard selon la vue active
+  const getTravelerInitialTab = (): 'home' | 'trips' | 'favorites' | 'profile' => {
+    switch (activeView) {
+      case 'BOOKINGS':
+        return 'trips';
+      case 'FAVORITES':
+        return 'favorites';
+      case 'PROFILE':
+        return 'home';
+      default:
+        return 'home';
     }
   };
 
@@ -462,12 +482,7 @@ const App: React.FC = () => {
                 );
               }}
               onOpenAuth={() => setIsAuthOpen(true)}
-              onLogout={() => {
-                authService.logout();
-                setCurrentUser(null);
-                setShowWelcome(true);
-                navigate('/');
-              }}
+              onLogout={handleLogout}
               onGoHome={() => {
                 setShowWelcome(true);
                 navigate('/');
@@ -575,37 +590,31 @@ const App: React.FC = () => {
                   <AdminDashboard currentUser={currentUser} />
                 )}
 
-                {activeView === 'BOOKINGS' && currentUser && (
-                  <BookingsView
-                    currentUser={currentUser}
+                {/* ✅ VOYAGEUR : PROFILE, BOOKINGS, FAVORITES → TravelerDashboard */}
+                {(activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES') && 
+                  currentUser && 
+                  userRole === 'TRAVELER' && (
+                  <TravelerDashboard
+                    travelerId={currentUser.id}
+                    travelerName={currentUser.full_name}
                     language={language}
-                    translations={t}
+                    onLanguageChange={setLanguage}
+                    onRefresh={refreshData}
+                    onNavigateToProperty={handleNavigateToProperty}
+                    onLogout={handleLogout}
+                    initialTab={getTravelerInitialTab()}
                   />
                 )}
 
-                {/* ✅ MODIFIÉ : PROFILE affiche TravelerDashboard pour les voyageurs */}
-                {activeView === 'PROFILE' && currentUser && (
-                  currentUser.role === 'TRAVELER' ? (
-                    <TravelerDashboard
-                      travelerId={currentUser.id}
-                      travelerName={currentUser.full_name}
-                      onRefresh={refreshData}
-                      onNavigateToProperty={handleNavigateToProperty}
-                    />
-                  ) : (
-                    <ProfileSettings
-                      currentUser={currentUser}
-                      language={language}
-                      translations={t}
-                      onLogout={() => {
-                        authService.logout();
-                        setCurrentUser(null);
-                        setShowWelcome(true);
-                        navigate('/');
-                      }}
-                      onSwitchRole={() => {}}
-                    />
-                  )
+                {/* ✅ HÔTE : PROFILE → ProfileSettings (car son dashboard est HOST_DASH) */}
+                {activeView === 'PROFILE' && currentUser && userRole === 'HOST' && (
+                  <ProfileSettings
+                    currentUser={currentUser}
+                    language={language}
+                    translations={t}
+                    onLogout={handleLogout}
+                    onSwitchRole={() => {}}
+                  />
                 )}
 
                 {activeView === 'ABOUT' && (
