@@ -10,6 +10,7 @@ import { AuthModal } from './components/AuthModal';
 import { AuthLanding } from './components/AuthLanding';
 import { AdminDashboard } from './components/AdminDashboard';
 import { HostDashboard } from './components/HostDashboard';
+import { TravelerDashboard } from './components/TravelerDashboard'; // ✅ AJOUTÉ
 import { AboutUs } from './components/AboutUs';
 import { ProfileSettings } from './components/ProfileSettings';
 import { LegalPages } from './components/LegalPages';
@@ -186,7 +187,7 @@ const App: React.FC = () => {
     }
   };
 
-  // Synchroniser activeView avec l’URL
+  // Synchroniser activeView avec l'URL
   useEffect(() => {
     const viewFromPath = pathToView(location.pathname);
 
@@ -259,6 +260,19 @@ const App: React.FC = () => {
     );
     return result;
   }, [selectedCategory, properties, maxPrice, minRating]);
+
+  // ✅ Fonction pour naviguer vers une propriété depuis TravelerDashboard
+  const handleNavigateToProperty = (propertyId: string) => {
+    const prop = properties.find(p => p.id === propertyId);
+    if (prop) {
+      setSelectedProperty(prop);
+    } else {
+      // Si pas trouvée dans la liste, on la charge
+      propertyService.getById(propertyId).then(p => {
+        if (p) setSelectedProperty(p);
+      });
+    }
+  };
 
   if (!hasCheckedSession) return null;
 
@@ -561,27 +575,37 @@ const App: React.FC = () => {
                   <AdminDashboard currentUser={currentUser} />
                 )}
 
-               {activeView === 'BOOKINGS' && currentUser && (
-  <BookingsView
-    currentUser={currentUser}
-    language={language}
-    translations={t}
-  />
-)}
-
-                {activeView === 'PROFILE' && currentUser && (
-                  <ProfileSettings
+                {activeView === 'BOOKINGS' && currentUser && (
+                  <BookingsView
                     currentUser={currentUser}
                     language={language}
                     translations={t}
-                    onLogout={() => {
-                      authService.logout();
-                      setCurrentUser(null);
-                      setShowWelcome(true);
-                      navigate('/');
-                    }}
-                    onSwitchRole={() => {}}
                   />
+                )}
+
+                {/* ✅ MODIFIÉ : PROFILE affiche TravelerDashboard pour les voyageurs */}
+                {activeView === 'PROFILE' && currentUser && (
+                  currentUser.role === 'TRAVELER' ? (
+                    <TravelerDashboard
+                      travelerId={currentUser.id}
+                      travelerName={currentUser.full_name}
+                      onRefresh={refreshData}
+                      onNavigateToProperty={handleNavigateToProperty}
+                    />
+                  ) : (
+                    <ProfileSettings
+                      currentUser={currentUser}
+                      language={language}
+                      translations={t}
+                      onLogout={() => {
+                        authService.logout();
+                        setCurrentUser(null);
+                        setShowWelcome(true);
+                        navigate('/');
+                      }}
+                      onSwitchRole={() => {}}
+                    />
+                  )
                 )}
 
                 {activeView === 'ABOUT' && (
