@@ -23,66 +23,36 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     host: 'Hôte',
     login: 'Connexion',
     searchPlaceholder: 'Où voulez-vous aller ?',
-    hostDashboard: 'Tableau de bord Hôte',
-    travelerAccount: 'Compte Voyageur',
-    mySpace: '🏠 Mon Espace', // ✅ AJOUTÉ
-    myTrips: '🎒 Mes Voyages',
-    myFavorites: '❤️ Mes Favoris',
-    dashboard: '📊 Dashboard',
-    myProperties: '🏠 Mes Propriétés',
-    revenue: '💰 Revenus',
-    viewProfile: '👤 Voir Profil',
-    switchMode: '🔄 Mode ',
-    settings: '⚙️ Paramètres',
-    logout: '🚪 Déconnexion',
-    languageLabel: 'Langue / اللغة',
-    admin: '⚡ ADMIN PROFIT',
-    about: '🚀 À Propos',
-    explore: '🌍 Explorer',
+    explore: 'Explorer',
+    mySpace: 'Mon Espace',
+    dashboard: 'Dashboard',
+    admin: 'Admin',
+    logout: 'Déconnexion',
+    switchRole: 'Changer de mode',
   },
   en: {
     traveler: 'Traveler',
     host: 'Host',
     login: 'Login',
     searchPlaceholder: 'Where do you want to go?',
-    hostDashboard: 'Host Dashboard',
-    travelerAccount: 'Traveler Account',
-    mySpace: '🏠 My Space', // ✅ AJOUTÉ
-    myTrips: '🎒 My Trips',
-    myFavorites: '❤️ My Favorites',
-    dashboard: '📊 Dashboard',
-    myProperties: '🏠 My Properties',
-    revenue: '💰 Revenue',
-    viewProfile: '👤 View Profile',
-    switchMode: '🔄 Switch to ',
-    settings: '⚙️ Settings',
-    logout: '🚪 Logout',
-    languageLabel: 'Language',
-    admin: '⚡ ADMIN PROFIT',
-    about: '🚀 About Us',
-    explore: '🌍 Explore',
+    explore: 'Explore',
+    mySpace: 'My Space',
+    dashboard: 'Dashboard',
+    admin: 'Admin',
+    logout: 'Log out',
+    switchRole: 'Switch mode',
   },
   ar: {
     traveler: 'مسافر',
     host: 'مضيف',
-    login: 'تسجيل الدخول',
-    searchPlaceholder: 'إلى أين تريد الذهاب ؟',
-    hostDashboard: 'لوحة المضيف',
-    travelerAccount: 'حساب المسافر',
-    mySpace: '🏠 مساحتي', // ✅ AJOUTÉ
-    myTrips: '🎒 رحلاتي',
-    myFavorites: '❤️ مفضلاتي',
-    dashboard: '📊 لوحة التحكم',
-    myProperties: '🏠 عقاراتي',
-    revenue: '💰 الأرباح',
-    viewProfile: '👤 الملف الشخصي',
-    switchMode: '🔄 التبديل إلى ',
-    settings: '⚙️ الإعدادات',
-    logout: '🚪 تسجيل الخروج',
-    languageLabel: 'اللغة',
-    admin: '⚡ إدارة الأرباح',
-    about: '🚀 حول لوكادز',
-    explore: '🌍 استكشاف',
+    login: 'دخول',
+    searchPlaceholder: 'إلى أين تريد الذهاب؟',
+    explore: 'استكشاف',
+    mySpace: 'مساحتي',
+    dashboard: 'لوحة التحكم',
+    admin: 'الإدارة',
+    logout: 'خروج',
+    switchRole: 'تغيير الوضع',
   },
 };
 
@@ -154,6 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const t = NAVBAR_TRANSLATIONS[language];
+  const isRTL = language === 'ar';
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -176,12 +147,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (onSearch) onSearch(searchQuery);
   };
 
-  const handleMenuItemClick = (view: string) => {
-    onNavigate(view);
+  const handleSwitchRole = () => {
+    onSwitchRole();
     setIsMenuOpen(false);
   };
-
-  const isRTL = language === 'ar';
 
   return (
     <header
@@ -237,82 +206,56 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             />
             <div
-              className={`absolute ${
-                isRTL ? 'right-4' : 'left-4'
-              } top-1/2 -translate-y-1/2 transition-colors duration-700 ${
+              className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 transition-colors duration-700 ${
                 isScrolled ? 'text-white/60' : 'text-indigo-600'
               }`}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="3"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
           </div>
         </form>
 
-        {/* ✅ BOUTONS NAVIGATION RAPIDE (pour voyageurs connectés) */}
-        {currentUser && userRole === 'TRAVELER' && (
+        {/* Boutons navigation rapide */}
+        {currentUser && (
           <div className="hidden lg:flex items-center gap-2">
             {/* Bouton Explorer */}
             <button
               onClick={() => onNavigate('EXPLORE')}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
                 isScrolled
                   ? 'text-white/70 hover:text-white hover:bg-white/10'
                   : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
               }`}
             >
-              {t.explore}
+              <span>🌍</span>
+              <span>{t.explore}</span>
             </button>
 
-            {/* ✅ Bouton Mon Espace (visible) */}
-            <button
-              onClick={() => onNavigate('PROFILE')}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
-                isScrolled
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
-                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg'
-              }`}
-            >
-              <span>🏠</span>
-              <span className="hidden xl:inline">
-                {language === 'ar' ? 'مساحتي' : language === 'en' ? 'My Space' : 'Mon Espace'}
-              </span>
-            </button>
-          </div>
-        )}
-
-        {/* ✅ BOUTON DASHBOARD HÔTE (pour hôtes connectés) */}
-        {currentUser && userRole === 'HOST' && (
-          <div className="hidden lg:flex items-center gap-2">
-            <button
-              onClick={() => onNavigate('HOST_DASH')}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
-                isScrolled
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
-                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
-              }`}
-            >
-              <span>📊</span>
-              <span className="hidden xl:inline">
-                {language === 'ar' ? 'لوحة التحكم' : language === 'en' ? 'Dashboard' : 'Dashboard'}
-              </span>
-            </button>
+            {/* Bouton Mon Espace (Voyageur) ou Dashboard (Hôte) */}
+            {userRole === 'TRAVELER' ? (
+              <button
+                onClick={() => onNavigate('PROFILE')}
+                className="px-4 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:shadow-xl hover:scale-105"
+              >
+                <span>🏠</span>
+                <span>{t.mySpace}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('HOST_DASH')}
+                className="px-4 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg hover:shadow-xl hover:scale-105"
+              >
+                <span>📊</span>
+                <span>{t.dashboard}</span>
+              </button>
+            )}
           </div>
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* Cloud Status Indicator */}
+          {/* Cloud Status */}
           <div className="relative group hidden sm:block">
             <div
               className={`w-2 h-2 rounded-full ${
@@ -322,7 +265,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-amber-500 animate-pulse'
                   : 'bg-rose-500 shadow-[0_0_8px_#ef4444]'
               }`}
-            ></div>
+            />
             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black text-white text-[7px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-[200]">
               {dbStatus === 'CONNECTED' ? 'Cloud Sync ON' : 'Cloud Sync OFF'}
             </div>
@@ -332,13 +275,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => (currentUser ? setIsMenuOpen(!isMenuOpen) : onOpenAuth())}
-              className={`flex items-center gap-2 p-1.5 pl-4 border rounded-full transition-all duration-700 active:scale-90 group relative ${
+              className={`flex items-center gap-2 p-1.5 pl-4 border rounded-full transition-all duration-500 active:scale-90 group relative ${
                 isScrolled
                   ? 'bg-white/10 border-white/20 hover:bg-white/20'
                   : 'bg-white border-gray-200 hover:shadow-xl'
-              } ${isMenuOpen ? 'shadow-lg' : ''} ${isScrolled ? 'scale-95' : 'scale-100'}`}
+              } ${isMenuOpen ? 'shadow-lg ring-2 ring-offset-2' : ''}`}
               style={{
-                borderColor: isScrolled && isMenuOpen ? accentColor : undefined,
+                ringColor: isMenuOpen ? accentColor : undefined,
               }}
             >
               <div className="flex flex-col items-end mr-1 hidden lg:flex">
@@ -352,7 +295,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {currentUser && (
                   <span
                     className={`text-[7px] font-black uppercase tracking-tighter transition-colors duration-700 ${
-                      isScrolled ? 'text-white/40' : 'text-indigo-400'
+                      isScrolled ? 'text-white/40' : userRole === 'HOST' ? 'text-amber-500' : 'text-purple-500'
                     }`}
                   >
                     {userRole === 'TRAVELER' ? t.traveler : t.host}
@@ -361,204 +304,189 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               <div
-                className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all duration-700 group-hover:scale-105 flex items-center justify-center relative ${
+                className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all duration-500 group-hover:scale-110 flex items-center justify-center relative ${
                   isScrolled ? 'bg-white/5' : 'bg-gray-50'
                 }`}
                 style={{
-                  borderColor: isScrolled ? `${accentColor}88` : '#EEF2FF',
-                  boxShadow: isScrolled ? `0 0 15px ${accentColor}33` : 'none',
+                  borderColor: userRole === 'HOST' ? '#f59e0b' : '#a855f7',
                 }}
               >
                 {currentUser ? (
-                  <img
-                    src={currentUser.avatar_url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <svg
-                    className={`w-4 h-4 transition-colors duration-700 ${
-                      isScrolled ? 'text-white' : 'text-gray-400'
-                    }`}
+                    className={`w-4 h-4 transition-colors duration-700 ${isScrolled ? 'text-white' : 'text-gray-400'}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2.5"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 )}
               </div>
 
-              <div
-                className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-                style={{ boxShadow: `0 0 20px ${accentColor}44` }}
-              />
+              {/* Indicateur menu ouvert */}
+              <svg
+                className={`w-3 h-3 transition-transform duration-300 hidden md:block ${
+                  isScrolled ? 'text-white/60' : 'text-gray-400'
+                } ${isMenuOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
 
-            {/* Menu déroulant */}
+            {/* ✅ MENU DÉROULANT SIMPLIFIÉ */}
             {isMenuOpen && currentUser && (
               <div
                 className={`
-                  z-[120] p-3 bg-white
-                  shadow-[0_25px_80px_rgba(0,0,0,0.25)]
-                  border border-white overflow-y-auto
-                  animate-in zoom-in-95 duration-300 origin-top
+                  z-[120] bg-white/95 backdrop-blur-xl
+                  shadow-[0_30px_100px_rgba(0,0,0,0.3)]
+                  border border-white/50 overflow-hidden
+                  animate-in zoom-in-95 fade-in duration-300 origin-top-right
 
                   fixed left-1/2 -translate-x-1/2
                   top-[calc(env(safe-area-inset-top,0px)+80px)]
-                  w-[90vw] max-w-sm max-h-[calc(100vh-120px)]
+                  w-[85vw] max-w-xs
                   rounded-[2rem]
 
-                  md:absolute md:top-full md:mt-4
-                  md:right-0 md:left-auto
-                  md:w-72 md:max-h-none
-                  md:rounded-[2.5rem] md:translate-x-0
+                  md:absolute md:top-full md:mt-3
+                  md:right-0 md:left-auto md:translate-x-0
+                  md:w-80
                 `}
               >
-                {/* Header du menu */}
-                <div
-                  className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
-                  style={{ backgroundColor: userRole === 'HOST' ? '#f59e0b' : accentColor }}
-                >
-                  <p className="font-black text-xl italic truncate">
-                    {currentUser.full_name} ✨
-                  </p>
-                  <p className="text-xs text-white/70 mt-1">
-                    {userRole === 'TRAVELER' ? t.traveler : t.host}
-                  </p>
+                {/* Header avec avatar et nom */}
+                <div className="relative overflow-hidden">
+                  <div 
+                    className="absolute inset-0 opacity-20"
+                    style={{
+                      background: userRole === 'HOST' 
+                        ? 'linear-gradient(135deg, #f59e0b, #ea580c)' 
+                        : 'linear-gradient(135deg, #a855f7, #ec4899)'
+                    }}
+                  />
+                  <div className="relative p-6 flex items-center gap-4">
+                    <div 
+                      className="w-14 h-14 rounded-2xl overflow-hidden border-3 shadow-xl"
+                      style={{ borderColor: userRole === 'HOST' ? '#f59e0b' : '#a855f7' }}
+                    >
+                      <img src={currentUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-gray-900 text-lg truncate">
+                        {currentUser.full_name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{currentUser.email}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  {/* Admin */}
-                  {currentUser.role === 'ADMIN' && (
-                    <button
-                      onClick={() => handleMenuItemClick('ADMIN')}
-                      className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 rounded-2xl transition-all flex items-center gap-3 group/admin"
-                    >
-                      <span className="group-hover/admin:animate-pulse">⚡</span>
-                      <span>{t.admin}</span>
-                    </button>
-                  )}
+                <div className="p-4 space-y-4">
+                  {/* ✅ SWITCH VOYAGEUR/HÔTE MAGNIFIQUE */}
+                  <div className="bg-gray-100 rounded-2xl p-1.5">
+                    <div className="relative flex">
+                      {/* Indicateur glissant */}
+                      <div
+                        className={`absolute top-0 bottom-0 w-1/2 rounded-xl transition-all duration-500 ease-out shadow-lg ${
+                          userRole === 'TRAVELER'
+                            ? 'left-0 bg-gradient-to-r from-purple-600 to-pink-600'
+                            : 'left-1/2 bg-gradient-to-r from-amber-500 to-orange-500'
+                        }`}
+                      />
 
-                  {/* ✅ Mon Espace (Voyageur seulement) */}
-                  {userRole === 'TRAVELER' && (
-                    <button
-                      onClick={() => handleMenuItemClick('PROFILE')}
-                      className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-purple-600 bg-purple-50 rounded-2xl transition-all flex items-center gap-3"
-                    >
-                      <span>🏠</span>
-                      <span>{t.mySpace}</span>
-                    </button>
-                  )}
-
-                  {/* ✅ Dashboard Hôte (Hôte seulement) */}
-                  {userRole === 'HOST' && (
-                    <button
-                      onClick={() => handleMenuItemClick('HOST_DASH')}
-                      className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 rounded-2xl transition-all flex items-center gap-3"
-                    >
-                      <span>📊</span>
-                      <span>{t.dashboard}</span>
-                    </button>
-                  )}
-
-                  {/* Mes Voyages */}
-                  <button
-                    onClick={() => handleMenuItemClick('BOOKINGS')}
-                    className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
-                  >
-                    <span>🎒</span>
-                    <span>{t.myTrips}</span>
-                  </button>
-
-                  {/* Mes Favoris */}
-                  <button
-                    onClick={() => handleMenuItemClick('FAVORITES')}
-                    className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
-                  >
-                    <span>❤️</span>
-                    <span>{t.myFavorites}</span>
-                  </button>
-
-                  <div className="h-[1px] bg-gray-100 my-2 mx-4" />
-
-                  {/* À propos */}
-                  <button
-                    onClick={() => handleMenuItemClick('ABOUT')}
-                    className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
-                  >
-                    <span>🚀</span>
-                    <span>{t.about}</span>
-                  </button>
-
-                  {/* Switch mode */}
-                  <button
-                    onClick={() => {
-                      onSwitchRole();
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
-                  >
-                    <span>🔄</span>
-                    <span>
-                      {t.switchMode}{' '}
-                      {userRole === 'TRAVELER' ? t.host : t.traveler}
-                    </span>
-                  </button>
-
-                  {/* Sélecteur de langue */}
-                  <div className="px-4 py-3 mt-2 border-t border-gray-50">
-                    <p className="text-[8px] font-black uppercase text-gray-400 tracking-[0.2em] mb-3">
-                      {t.languageLabel}
-                    </p>
-                    <div className="flex gap-2">
+                      {/* Bouton Voyageur */}
                       <button
-                        onClick={() => onLanguageChange('fr')}
-                        className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
-                          language === 'fr'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
+                        onClick={userRole !== 'TRAVELER' ? handleSwitchRole : undefined}
+                        className={`relative flex-1 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                          userRole === 'TRAVELER'
+                            ? 'text-white'
+                            : 'text-gray-500 hover:text-gray-700'
                         }`}
                       >
-                        🇫🇷 FR
+                        <span className="text-lg">🎒</span>
+                        <span>{t.traveler}</span>
                       </button>
+
+                      {/* Bouton Hôte */}
                       <button
-                        onClick={() => onLanguageChange('en')}
-                        className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
-                          language === 'en'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
+                        onClick={userRole !== 'HOST' ? handleSwitchRole : undefined}
+                        className={`relative flex-1 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
+                          userRole === 'HOST'
+                            ? 'text-white'
+                            : 'text-gray-500 hover:text-gray-700'
                         }`}
                       >
-                        🇬🇧 EN
-                      </button>
-                      <button
-                        onClick={() => onLanguageChange('ar')}
-                        className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${
-                          language === 'ar'
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        🇩🇿 AR
+                        <span className="text-lg">🏠</span>
+                        <span>{t.host}</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Déconnexion */}
+                  {/* ✅ ADMIN (si admin seulement) */}
+                  {currentUser.role === 'ADMIN' && (
+                    <button
+                      onClick={() => {
+                        onNavigate('ADMIN');
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full p-4 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all"
+                    >
+                      <span className="text-lg">⚡</span>
+                      <span>{t.admin} Dashboard</span>
+                    </button>
+                  )}
+
+                  {/* Séparateur */}
+                  <div className="h-px bg-gray-200" />
+
+                  {/* ✅ SÉLECTEUR DE LANGUE */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onLanguageChange('fr')}
+                      className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
+                        language === 'fr'
+                          ? 'bg-gray-900 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span>🇫🇷</span>
+                      <span>FR</span>
+                    </button>
+                    <button
+                      onClick={() => onLanguageChange('en')}
+                      className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
+                        language === 'en'
+                          ? 'bg-gray-900 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span>🇬🇧</span>
+                      <span>EN</span>
+                    </button>
+                    <button
+                      onClick={() => onLanguageChange('ar')}
+                      className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-1.5 ${
+                        language === 'ar'
+                          ? 'bg-gray-900 text-white shadow-lg'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <span>🇩🇿</span>
+                      <span>AR</span>
+                    </button>
+                  </div>
+
+                  {/* ✅ DÉCONNEXION */}
                   <button
                     onClick={() => {
                       onLogout();
                       setIsMenuOpen(false);
                     }}
-                    className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:bg-rose-50 rounded-2xl transition-all flex items-center gap-3"
+                    className="w-full p-4 bg-rose-50 hover:bg-rose-100 rounded-2xl text-rose-600 font-bold text-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                   >
-                    <span>🚪</span>
+                    <span>👋</span>
                     <span>{t.logout}</span>
                   </button>
                 </div>
