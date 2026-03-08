@@ -269,14 +269,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
 
   const recentNotifications = notifications.slice(0, 5);
 
-  // Onglets
-  const tabs: { id: TabType; label: string; icon: string }[] = [
-    { id: 'overview', label: 'Vue d'ensemble', icon: '📊' },
-    { id: 'properties', label: 'Mes Biens', icon: '🏠' },
-    { id: 'bookings', label: 'Réservations', icon: '📅' },
-    { id: 'revenue', label: 'Revenus', icon: '💰' },
-    { id: 'settings', label: 'Paramètres', icon: '⚙️' },
-  ];
+ // Onglets
+const tabs: { id: TabType; label: string; icon: string }[] = [
+  { id: 'overview', label: "Vue d'ensemble", icon: '📊' },
+  { id: 'properties', label: 'Mes Biens', icon: '🏠' },
+  { id: 'bookings', label: 'Réservations', icon: '📅' },
+  { id: 'revenue', label: 'Revenus', icon: '💰' },
+  { id: 'settings', label: 'Paramètres', icon: '⚙️' },
+];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
