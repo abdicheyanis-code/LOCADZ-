@@ -5,6 +5,7 @@ import {
   Booking,
   BookingStatus,
   Notification,
+  AppLanguage,
 } from '../types';
 import { bookingService } from '../services/bookingService';
 import { propertyService } from '../services/propertyService';
@@ -17,18 +18,246 @@ import { IdVerificationModal } from './IdVerificationModal';
 interface TravelerDashboardProps {
   travelerId: string;
   travelerName: string;
+  language: AppLanguage;
+  onLanguageChange: (lang: AppLanguage) => void;
   onRefresh: () => void;
   onNavigateToProperty?: (propertyId: string) => void;
+  onLogout: () => void;
+  initialTab?: 'home' | 'trips' | 'favorites' | 'profile';
 }
 
 type TabType = 'home' | 'trips' | 'favorites' | 'profile';
+
+// 🌍 Traductions complètes
+const DASHBOARD_TRANSLATIONS: Record<AppLanguage, any> = {
+  fr: {
+    greeting: 'Salut',
+    level: 'Niveau',
+    nextTrip: 'Prochain voyage',
+    tabs: {
+      home: 'Mon Espace',
+      trips: 'Mes Voyages',
+      favorites: 'Favoris',
+      profile: 'Mon Profil',
+    },
+    home: {
+      nextTripIn: 'Prochain voyage dans',
+      days: 'jours',
+      hours: 'heures',
+      minutes: 'min',
+      noTrip: 'Aucun voyage prévu',
+      noTripDesc: "C'est le moment de planifier ta prochaine aventure !",
+      explore: 'Explorer les logements',
+      nightsSpent: 'Nuits passées',
+      trips: 'Voyages',
+      favorites: 'Favoris',
+      upcoming: 'À venir',
+      recentNotifs: 'Notifications récentes',
+      moreTrips: 'voyage(s) pour le niveau suivant',
+      maxLevel: 'Niveau maximum atteint !',
+    },
+    trips: {
+      pending: 'En attente de confirmation',
+      upcoming: 'Voyages à venir',
+      history: 'Historique',
+      noBooking: 'Aucune réservation',
+      noBookingDesc: "Tu n'as pas encore réservé de logement",
+      discover: 'Découvrir les logements',
+      leaveReview: 'Laisser un avis',
+      travelers: 'voyageur(s)',
+    },
+    favorites: {
+      title: 'Mes coups de cœur',
+      empty: 'Aucun favori',
+      emptyDesc: 'Explore les logements et ajoute tes coups de cœur !',
+      exploreNow: 'Explorer maintenant',
+      perNight: '/nuit',
+      reviews: 'avis',
+    },
+    profile: {
+      title: 'Paramètres du compte',
+      phone: 'Téléphone',
+      verifyIdentity: 'Vérifie ton identité',
+      verifyDesc: 'Pour une expérience complète et sécurisée',
+      verifyNow: 'Vérifier maintenant',
+      verified: 'Identité vérifiée',
+      verifiedDesc: 'Ton compte est entièrement vérifié',
+      tripsCompleted: 'Voyages effectués',
+      nightsBooked: 'Nuits réservées',
+      memberSince: 'Membre depuis',
+      language: 'Langue',
+      logout: 'Se déconnecter',
+    },
+    status: {
+      PENDING_APPROVAL: '⏳ En attente',
+      APPROVED: '✅ Confirmée',
+      PAID: '💳 Payée',
+      CANCELLED: '❌ Annulée',
+      REJECTED: '🚫 Refusée',
+    },
+    levels: {
+      new: 'Nouveau',
+      beginner: 'Débutant',
+      explorer: 'Explorateur',
+      adventurer: 'Aventurier Pro',
+      legend: 'Nomade Légendaire',
+    },
+  },
+  en: {
+    greeting: 'Hi',
+    level: 'Level',
+    nextTrip: 'Next trip',
+    tabs: {
+      home: 'My Space',
+      trips: 'My Trips',
+      favorites: 'Favorites',
+      profile: 'My Profile',
+    },
+    home: {
+      nextTripIn: 'Next trip in',
+      days: 'days',
+      hours: 'hours',
+      minutes: 'min',
+      noTrip: 'No trip planned',
+      noTripDesc: "It's time to plan your next adventure!",
+      explore: 'Explore listings',
+      nightsSpent: 'Nights spent',
+      trips: 'Trips',
+      favorites: 'Favorites',
+      upcoming: 'Upcoming',
+      recentNotifs: 'Recent notifications',
+      moreTrips: 'trip(s) to next level',
+      maxLevel: 'Maximum level reached!',
+    },
+    trips: {
+      pending: 'Pending confirmation',
+      upcoming: 'Upcoming trips',
+      history: 'History',
+      noBooking: 'No reservations',
+      noBookingDesc: "You haven't booked a place yet",
+      discover: 'Discover listings',
+      leaveReview: 'Leave a review',
+      travelers: 'traveler(s)',
+    },
+    favorites: {
+      title: 'My favorites',
+      empty: 'No favorites',
+      emptyDesc: 'Explore listings and add your favorites!',
+      exploreNow: 'Explore now',
+      perNight: '/night',
+      reviews: 'reviews',
+    },
+    profile: {
+      title: 'Account settings',
+      phone: 'Phone',
+      verifyIdentity: 'Verify your identity',
+      verifyDesc: 'For a complete and secure experience',
+      verifyNow: 'Verify now',
+      verified: 'Identity verified',
+      verifiedDesc: 'Your account is fully verified',
+      tripsCompleted: 'Trips completed',
+      nightsBooked: 'Nights booked',
+      memberSince: 'Member since',
+      language: 'Language',
+      logout: 'Log out',
+    },
+    status: {
+      PENDING_APPROVAL: '⏳ Pending',
+      APPROVED: '✅ Confirmed',
+      PAID: '💳 Paid',
+      CANCELLED: '❌ Cancelled',
+      REJECTED: '🚫 Rejected',
+    },
+    levels: {
+      new: 'New',
+      beginner: 'Beginner',
+      explorer: 'Explorer',
+      adventurer: 'Pro Adventurer',
+      legend: 'Legendary Nomad',
+    },
+  },
+  ar: {
+    greeting: 'مرحباً',
+    level: 'المستوى',
+    nextTrip: 'الرحلة القادمة',
+    tabs: {
+      home: 'مساحتي',
+      trips: 'رحلاتي',
+      favorites: 'المفضلة',
+      profile: 'ملفي الشخصي',
+    },
+    home: {
+      nextTripIn: 'الرحلة القادمة خلال',
+      days: 'يوم',
+      hours: 'ساعة',
+      minutes: 'دقيقة',
+      noTrip: 'لا توجد رحلة مخططة',
+      noTripDesc: 'حان الوقت للتخطيط لمغامرتك القادمة!',
+      explore: 'استكشاف الأماكن',
+      nightsSpent: 'ليالٍ قضيتها',
+      trips: 'رحلات',
+      favorites: 'المفضلة',
+      upcoming: 'القادمة',
+      recentNotifs: 'الإشعارات الأخيرة',
+      moreTrips: 'رحلة للمستوى التالي',
+      maxLevel: 'وصلت للمستوى الأقصى!',
+    },
+    trips: {
+      pending: 'في انتظار التأكيد',
+      upcoming: 'الرحلات القادمة',
+      history: 'السجل',
+      noBooking: 'لا توجد حجوزات',
+      noBookingDesc: 'لم تحجز أي مكان بعد',
+      discover: 'اكتشف الأماكن',
+      leaveReview: 'اترك تقييماً',
+      travelers: 'مسافر(ين)',
+    },
+    favorites: {
+      title: 'المفضلة لدي',
+      empty: 'لا توجد مفضلات',
+      emptyDesc: 'استكشف الأماكن وأضف مفضلاتك!',
+      exploreNow: 'استكشف الآن',
+      perNight: '/ليلة',
+      reviews: 'تقييم',
+    },
+    profile: {
+      title: 'إعدادات الحساب',
+      phone: 'الهاتف',
+      verifyIdentity: 'تحقق من هويتك',
+      verifyDesc: 'لتجربة كاملة وآمنة',
+      verifyNow: 'تحقق الآن',
+      verified: 'تم التحقق من الهوية',
+      verifiedDesc: 'حسابك مُفعّل بالكامل',
+      tripsCompleted: 'رحلات مكتملة',
+      nightsBooked: 'ليالٍ محجوزة',
+      memberSince: 'عضو منذ',
+      language: 'اللغة',
+      logout: 'تسجيل الخروج',
+    },
+    status: {
+      PENDING_APPROVAL: '⏳ قيد الانتظار',
+      APPROVED: '✅ مؤكدة',
+      PAID: '💳 مدفوعة',
+      CANCELLED: '❌ ملغاة',
+      REJECTED: '🚫 مرفوضة',
+    },
+    levels: {
+      new: 'جديد',
+      beginner: 'مبتدئ',
+      explorer: 'مستكشف',
+      adventurer: 'مغامر محترف',
+      legend: 'رحّالة أسطوري',
+    },
+  },
+};
 
 // 🎨 Mini carte propriété pour les favoris
 const FavoritePropertyCard: React.FC<{
   property: Property;
   onRemove: () => void;
   onView: () => void;
-}> = ({ property, onRemove, onView }) => {
+  t: any;
+}> = ({ property, onRemove, onView, t }) => {
   const [isRemoving, setIsRemoving] = useState(false);
 
   const handleRemove = async (e: React.MouseEvent) => {
@@ -44,17 +273,14 @@ const FavoritePropertyCard: React.FC<{
         isRemoving ? 'opacity-50 scale-95' : ''
       }`}
     >
-      {/* Image */}
       <div className="relative h-48 overflow-hidden">
         <img
           src={property.images[0]?.image_url || '/placeholder.jpg'}
           alt={property.title}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
-        {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         
-        {/* Bouton retirer des favoris */}
         <button
           onClick={handleRemove}
           className="absolute top-3 right-3 w-10 h-10 bg-white/90 hover:bg-white rounded-full flex items-center justify-center text-rose-500 hover:scale-110 transition-all shadow-lg"
@@ -64,14 +290,12 @@ const FavoritePropertyCard: React.FC<{
           </svg>
         </button>
 
-        {/* Prix */}
         <div className="absolute bottom-3 left-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full">
           <span className="font-black text-gray-900">{formatCurrency(property.price)}</span>
-          <span className="text-gray-500 text-sm"> /nuit</span>
+          <span className="text-gray-500 text-sm">{t.favorites.perNight}</span>
         </div>
       </div>
 
-      {/* Infos */}
       <div className="p-4">
         <h3 className="font-bold text-white text-lg line-clamp-1 group-hover:text-indigo-300 transition-colors">
           {property.title}
@@ -87,7 +311,7 @@ const FavoritePropertyCard: React.FC<{
           <div className="flex items-center gap-1 mt-2">
             <span className="text-yellow-400">⭐</span>
             <span className="text-white font-bold">{property.rating.toFixed(1)}</span>
-            <span className="text-white/40 text-sm">({property.reviews_count} avis)</span>
+            <span className="text-white/40 text-sm">({property.reviews_count} {t.favorites.reviews})</span>
           </div>
         )}
       </div>
@@ -96,7 +320,7 @@ const FavoritePropertyCard: React.FC<{
 };
 
 // 🎯 Countdown component
-const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
+const CountdownTimer: React.FC<{ targetDate: string; t: any }> = ({ targetDate, t }) => {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
 
   useEffect(() => {
@@ -120,17 +344,17 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
     <div className="flex gap-4">
       <div className="text-center">
         <div className="text-4xl font-black text-white">{timeLeft.days}</div>
-        <div className="text-xs text-white/60 uppercase tracking-wider">jours</div>
+        <div className="text-xs text-white/60 uppercase tracking-wider">{t.home.days}</div>
       </div>
       <div className="text-2xl text-white/40 font-bold">:</div>
       <div className="text-center">
         <div className="text-4xl font-black text-white">{timeLeft.hours}</div>
-        <div className="text-xs text-white/60 uppercase tracking-wider">heures</div>
+        <div className="text-xs text-white/60 uppercase tracking-wider">{t.home.hours}</div>
       </div>
       <div className="text-2xl text-white/40 font-bold">:</div>
       <div className="text-center">
         <div className="text-4xl font-black text-white">{timeLeft.minutes}</div>
-        <div className="text-xs text-white/60 uppercase tracking-wider">min</div>
+        <div className="text-xs text-white/60 uppercase tracking-wider">{t.home.minutes}</div>
       </div>
     </div>
   );
@@ -139,10 +363,14 @@ const CountdownTimer: React.FC<{ targetDate: string }> = ({ targetDate }) => {
 export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
   travelerId,
   travelerName,
+  language,
+  onLanguageChange,
   onRefresh,
   onNavigateToProperty,
+  onLogout,
+  initialTab = 'home',
 }) => {
-  const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isVerifModalOpen, setIsVerifModalOpen] = useState(false);
 
@@ -153,7 +381,14 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
   const [loading, setLoading] = useState(true);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
 
+  const t = DASHBOARD_TRANSLATIONS[language];
+  const isRTL = language === 'ar';
   const isVerified = currentUser?.id_verification_status === 'VERIFIED';
+
+  // Mettre à jour l'onglet si initialTab change
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // Stats calculées
   const upcomingTrips = bookings.filter(
@@ -179,7 +414,6 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     try {
       const userBookings = await bookingService.getUserBookings(travelerId);
       
-      // Enrichir avec les titres des propriétés
       const enrichedBookings = await Promise.all(
         userBookings.map(async (booking) => {
           if (!booking.property_title) {
@@ -243,22 +477,22 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     }
   };
 
-  // Niveaux explorateur (gamification légère)
+  // Niveaux explorateur
   const getExplorerLevel = () => {
-    if (pastTrips.length >= 10) return { level: 'Nomade Légendaire', emoji: '🏆', progress: 100 };
-    if (pastTrips.length >= 5) return { level: 'Aventurier Pro', emoji: '🎯', progress: 75 };
-    if (pastTrips.length >= 2) return { level: 'Explorateur', emoji: '🧭', progress: 50 };
-    if (pastTrips.length >= 1) return { level: 'Débutant', emoji: '🌱', progress: 25 };
-    return { level: 'Nouveau', emoji: '👋', progress: 0 };
+    if (pastTrips.length >= 10) return { level: t.levels.legend, emoji: '🏆', progress: 100 };
+    if (pastTrips.length >= 5) return { level: t.levels.adventurer, emoji: '🎯', progress: 75 };
+    if (pastTrips.length >= 2) return { level: t.levels.explorer, emoji: '🧭', progress: 50 };
+    if (pastTrips.length >= 1) return { level: t.levels.beginner, emoji: '🌱', progress: 25 };
+    return { level: t.levels.new, emoji: '👋', progress: 0 };
   };
 
   const explorerLevel = getExplorerLevel();
 
   const tabs: { id: TabType; label: string; icon: string; badge?: number }[] = [
-    { id: 'home', label: 'Mon Espace', icon: '🏠' },
-    { id: 'trips', label: 'Mes Voyages', icon: '📅', badge: pendingBookings.length || undefined },
-    { id: 'favorites', label: 'Favoris', icon: '❤️', badge: favoriteProperties.length || undefined },
-    { id: 'profile', label: 'Mon Profil', icon: '👤' },
+    { id: 'home', label: t.tabs.home, icon: '🏠' },
+    { id: 'trips', label: t.tabs.trips, icon: '📅', badge: pendingBookings.length || undefined },
+    { id: 'favorites', label: t.tabs.favorites, icon: '❤️', badge: favoriteProperties.length || undefined },
+    { id: 'profile', label: t.tabs.profile, icon: '👤' },
   ];
 
   const statusColors: Record<BookingStatus, string> = {
@@ -269,39 +503,26 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     REJECTED: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   };
 
-  const statusLabels: Record<BookingStatus, string> = {
-    PENDING_APPROVAL: '⏳ En attente',
-    APPROVED: '✅ Confirmée',
-    PAID: '💳 Payée',
-    CANCELLED: '❌ Annulée',
-    REJECTED: '🚫 Refusée',
-  };
-
-  const statusIcons: Record<BookingStatus, string> = {
-    PENDING_APPROVAL: '⏳',
-    APPROVED: '✅',
-    PAID: '💳',
-    CANCELLED: '❌',
-    REJECTED: '🚫',
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                Salut, {travelerName.split(' ')[0]} ! 👋
+                {t.greeting}, {travelerName.split(' ')[0]} ! 👋
               </h1>
               <p className="text-sm text-white/60 mt-1">
-                {explorerLevel.emoji} Niveau : <span className="font-bold text-purple-300">{explorerLevel.level}</span>
+                {explorerLevel.emoji} {t.level} : <span className="font-bold text-purple-300">{explorerLevel.level}</span>
               </p>
             </div>
             {nextTrip && (
               <div className="hidden md:block text-right">
-                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Prochain voyage</p>
+                <p className="text-xs text-white/60 uppercase tracking-wider mb-1">{t.nextTrip}</p>
                 <p className="text-lg font-bold text-white">{nextTrip.property_title}</p>
               </div>
             )}
@@ -346,17 +567,18 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-2xl">✈️</span>
                       <span className="text-white/80 font-bold uppercase tracking-wider text-sm">
-                        Prochain voyage dans
+                        {t.home.nextTripIn}
                       </span>
                     </div>
                     
-                    <CountdownTimer targetDate={nextTrip.start_date} />
+                    <CountdownTimer targetDate={nextTrip.start_date} t={t} />
                     
                     <div className="mt-6 pt-6 border-t border-white/20">
                       <h3 className="text-2xl font-black text-white">{nextTrip.property_title}</h3>
                       <p className="text-white/80 mt-1">
-                        📅 Du {new Date(nextTrip.start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
-                        {' '}au {new Date(nextTrip.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                        📅 {new Date(nextTrip.start_date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'long' })}
+                        {' → '}
+                        {new Date(nextTrip.end_date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'long' })}
                       </p>
                     </div>
                   </div>
@@ -364,10 +586,10 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
               ) : (
                 <div className="bg-white/5 border border-white/10 rounded-[2rem] p-12 text-center">
                   <span className="text-6xl mb-4 block">🌴</span>
-                  <h3 className="text-2xl font-black text-white mb-2">Aucun voyage prévu</h3>
-                  <p className="text-white/60 mb-6">C'est le moment de planifier ta prochaine aventure !</p>
+                  <h3 className="text-2xl font-black text-white mb-2">{t.home.noTrip}</h3>
+                  <p className="text-white/60 mb-6">{t.home.noTripDesc}</p>
                   <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-bold hover:scale-105 transition-all">
-                    Explorer les logements
+                    {t.home.explore}
                   </button>
                 </div>
               )}
@@ -377,22 +599,22 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 rounded-3xl text-center">
                   <span className="text-4xl mb-2 block">🌙</span>
                   <p className="text-3xl font-black text-white">{totalNights}</p>
-                  <p className="text-xs text-white/60 uppercase tracking-wider">Nuits passées</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider">{t.home.nightsSpent}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 rounded-3xl text-center">
                   <span className="text-4xl mb-2 block">🏠</span>
                   <p className="text-3xl font-black text-white">{pastTrips.length}</p>
-                  <p className="text-xs text-white/60 uppercase tracking-wider">Voyages</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider">{t.home.trips}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 rounded-3xl text-center">
                   <span className="text-4xl mb-2 block">❤️</span>
                   <p className="text-3xl font-black text-white">{favoriteProperties.length}</p>
-                  <p className="text-xs text-white/60 uppercase tracking-wider">Favoris</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider">{t.home.favorites}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-6 rounded-3xl text-center">
                   <span className="text-4xl mb-2 block">📅</span>
                   <p className="text-3xl font-black text-white">{upcomingTrips.length}</p>
-                  <p className="text-xs text-white/60 uppercase tracking-wider">À venir</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wider">{t.home.upcoming}</p>
                 </div>
               </div>
 
@@ -405,8 +627,8 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                       <p className="font-black text-white text-lg">{explorerLevel.level}</p>
                       <p className="text-xs text-white/60">
                         {pastTrips.length < 10
-                          ? `Encore ${10 - pastTrips.length} voyage(s) pour le niveau suivant`
-                          : 'Niveau maximum atteint !'}
+                          ? `${10 - pastTrips.length} ${t.home.moreTrips}`
+                          : t.home.maxLevel}
                       </p>
                     </div>
                   </div>
@@ -422,7 +644,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
               {/* Notifications récentes */}
               {notifications.length > 0 && (
                 <div>
-                  <h2 className="text-xl font-black text-white mb-4">🔔 Notifications récentes</h2>
+                  <h2 className="text-xl font-black text-white mb-4">🔔 {t.home.recentNotifs}</h2>
                   <div className="space-y-3">
                     {notifications.slice(0, 3).map((n) => (
                       <div
@@ -455,7 +677,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 <div>
                   <h2 className="text-xl font-black text-white mb-4 flex items-center gap-2">
                     <span className="animate-pulse">⏳</span>
-                    En attente de confirmation ({pendingBookings.length})
+                    {t.trips.pending} ({pendingBookings.length})
                   </h2>
                   <div className="space-y-4">
                     {pendingBookings.map((booking) => (
@@ -472,7 +694,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                           </div>
                           <div className="text-right">
                             <span className={`px-4 py-2 rounded-full text-sm font-bold border ${statusColors[booking.status]}`}>
-                              {statusLabels[booking.status]}
+                              {t.status[booking.status]}
                             </span>
                             <p className="text-white font-bold mt-2">{formatCurrency(booking.total_price)}</p>
                           </div>
@@ -486,7 +708,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
               {/* À venir */}
               {upcomingTrips.length > 0 && (
                 <div>
-                  <h2 className="text-xl font-black text-white mb-4">🎯 Voyages à venir ({upcomingTrips.length})</h2>
+                  <h2 className="text-xl font-black text-white mb-4">🎯 {t.trips.upcoming} ({upcomingTrips.length})</h2>
                   <div className="space-y-4">
                     {upcomingTrips.map((booking) => (
                       <div
@@ -496,21 +718,20 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                           <div>
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-2xl">{statusIcons[booking.status]}</span>
                               <h3 className="text-lg font-black text-white">{booking.property_title}</h3>
                             </div>
                             <p className="text-white/60 text-sm">
-                              📅 {new Date(booking.start_date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
+                              📅 {new Date(booking.start_date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
                               {' → '}
-                              {new Date(booking.end_date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
+                              {new Date(booking.end_date).toLocaleDateString(language === 'ar' ? 'ar-DZ' : 'fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
                             </p>
                             {booking.guests_count && (
-                              <p className="text-white/40 text-sm mt-1">👥 {booking.guests_count} voyageur(s)</p>
+                              <p className="text-white/40 text-sm mt-1">👥 {booking.guests_count} {t.trips.travelers}</p>
                             )}
                           </div>
                           <div className="text-right">
                             <span className={`px-4 py-2 rounded-full text-sm font-bold border ${statusColors[booking.status]}`}>
-                              {statusLabels[booking.status]}
+                              {t.status[booking.status]}
                             </span>
                             <p className="text-2xl font-black text-white mt-2">{formatCurrency(booking.total_price)}</p>
                           </div>
@@ -524,7 +745,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
               {/* Historique */}
               {pastTrips.length > 0 && (
                 <div>
-                  <h2 className="text-xl font-black text-white mb-4">📚 Historique ({pastTrips.length})</h2>
+                  <h2 className="text-xl font-black text-white mb-4">📚 {t.trips.history} ({pastTrips.length})</h2>
                   <div className="space-y-4">
                     {pastTrips.map((booking) => (
                       <div
@@ -539,7 +760,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                             </p>
                           </div>
                           <button className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-xl text-sm font-bold hover:bg-purple-500/30 transition-all">
-                            Laisser un avis ⭐
+                            {t.trips.leaveReview} ⭐
                           </button>
                         </div>
                       </div>
@@ -552,10 +773,10 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
               {bookings.length === 0 && !loading && (
                 <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center">
                   <span className="text-6xl mb-4 block">🧳</span>
-                  <h3 className="text-2xl font-black text-white mb-2">Aucune réservation</h3>
-                  <p className="text-white/60 mb-6">Tu n'as pas encore réservé de logement</p>
+                  <h3 className="text-2xl font-black text-white mb-2">{t.trips.noBooking}</h3>
+                  <p className="text-white/60 mb-6">{t.trips.noBookingDesc}</p>
                   <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-bold hover:scale-105 transition-all">
-                    Découvrir les logements
+                    {t.trips.discover}
                   </button>
                 </div>
               )}
@@ -566,7 +787,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
           {activeTab === 'favorites' && (
             <div>
               <h2 className="text-2xl font-black text-white mb-6">
-                ❤️ Mes coups de cœur ({favoriteProperties.length})
+                ❤️ {t.favorites.title} ({favoriteProperties.length})
               </h2>
 
               {loadingFavorites ? (
@@ -583,16 +804,17 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                       property={property}
                       onRemove={() => handleRemoveFavorite(property.id)}
                       onView={() => handleViewProperty(property.id)}
+                      t={t}
                     />
                   ))}
                 </div>
               ) : (
                 <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center">
                   <span className="text-6xl mb-4 block">💔</span>
-                  <h3 className="text-2xl font-black text-white mb-2">Aucun favori</h3>
-                  <p className="text-white/60 mb-6">Explore les logements et ajoute tes coups de cœur !</p>
+                  <h3 className="text-2xl font-black text-white mb-2">{t.favorites.empty}</h3>
+                  <p className="text-white/60 mb-6">{t.favorites.emptyDesc}</p>
                   <button className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-bold hover:scale-105 transition-all">
-                    Explorer maintenant
+                    {t.favorites.exploreNow}
                   </button>
                 </div>
               )}
@@ -620,10 +842,47 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
 
                 {currentUser?.phone_number && (
                   <div className="p-4 bg-white/5 rounded-2xl">
-                    <p className="text-xs text-white/60 uppercase tracking-wider mb-1">Téléphone</p>
+                    <p className="text-xs text-white/60 uppercase tracking-wider mb-1">{t.profile.phone}</p>
                     <p className="text-white font-bold">{currentUser.phone_number}</p>
                   </div>
                 )}
+              </div>
+
+              {/* Choix de langue */}
+              <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-6">
+                <h3 className="text-lg font-black text-white mb-4">{t.profile.language}</h3>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => onLanguageChange('fr')}
+                    className={`flex-1 py-4 rounded-2xl font-bold text-sm transition-all ${
+                      language === 'fr'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    🇫🇷 Français
+                  </button>
+                  <button
+                    onClick={() => onLanguageChange('en')}
+                    className={`flex-1 py-4 rounded-2xl font-bold text-sm transition-all ${
+                      language === 'en'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                  <button
+                    onClick={() => onLanguageChange('ar')}
+                    className={`flex-1 py-4 rounded-2xl font-bold text-sm transition-all ${
+                      language === 'ar'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                    }`}
+                  >
+                    🇩🇿 العربية
+                  </button>
+                </div>
               </div>
 
               {/* Vérification d'identité */}
@@ -634,17 +893,15 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                       ⚠️
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-amber-100">Vérifie ton identité</h3>
-                      <p className="text-sm text-amber-200/80">
-                        Pour une expérience complète et sécurisée
-                      </p>
+                      <h3 className="text-xl font-black text-amber-100">{t.profile.verifyIdentity}</h3>
+                      <p className="text-sm text-amber-200/80">{t.profile.verifyDesc}</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setIsVerifModalOpen(true)}
                     className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold transition-all"
                   >
-                    Vérifier maintenant
+                    {t.profile.verifyNow}
                   </button>
                 </div>
               ) : (
@@ -654,10 +911,8 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                       ✓
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-emerald-100">Identité vérifiée</h3>
-                      <p className="text-sm text-emerald-200/80">
-                        Ton compte est entièrement vérifié
-                      </p>
+                      <h3 className="text-xl font-black text-emerald-100">{t.profile.verified}</h3>
+                      <p className="text-sm text-emerald-200/80">{t.profile.verifiedDesc}</p>
                     </div>
                   </div>
                 </div>
@@ -667,23 +922,32 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
                   <p className="text-2xl font-black text-white">{pastTrips.length}</p>
-                  <p className="text-xs text-white/60">Voyages effectués</p>
+                  <p className="text-xs text-white/60">{t.profile.tripsCompleted}</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
                   <p className="text-2xl font-black text-white">{totalNights}</p>
-                  <p className="text-xs text-white/60">Nuits réservées</p>
+                  <p className="text-xs text-white/60">{t.profile.nightsBooked}</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
                   <p className="text-2xl font-black text-white">{favoriteProperties.length}</p>
-                  <p className="text-xs text-white/60">Favoris</p>
+                  <p className="text-xs text-white/60">{t.home.favorites}</p>
                 </div>
                 <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center">
                   <p className="text-2xl font-black text-white">
                     {new Date(currentUser?.created_at || '').getFullYear() || '-'}
                   </p>
-                  <p className="text-xs text-white/60">Membre depuis</p>
+                  <p className="text-xs text-white/60">{t.profile.memberSince}</p>
                 </div>
               </div>
+
+              {/* Bouton déconnexion */}
+              <button
+                onClick={onLogout}
+                className="w-full py-4 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                <span>🚪</span>
+                <span>{t.profile.logout}</span>
+              </button>
             </div>
           )}
         </div>
