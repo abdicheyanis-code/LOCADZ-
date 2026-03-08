@@ -25,6 +25,7 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     searchPlaceholder: 'Où voulez-vous aller ?',
     hostDashboard: 'Tableau de bord Hôte',
     travelerAccount: 'Compte Voyageur',
+    mySpace: '🏠 Mon Espace', // ✅ AJOUTÉ
     myTrips: '🎒 Mes Voyages',
     myFavorites: '❤️ Mes Favoris',
     dashboard: '📊 Dashboard',
@@ -37,6 +38,7 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     languageLabel: 'Langue / اللغة',
     admin: '⚡ ADMIN PROFIT',
     about: '🚀 À Propos',
+    explore: '🌍 Explorer',
   },
   en: {
     traveler: 'Traveler',
@@ -45,6 +47,7 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     searchPlaceholder: 'Where do you want to go?',
     hostDashboard: 'Host Dashboard',
     travelerAccount: 'Traveler Account',
+    mySpace: '🏠 My Space', // ✅ AJOUTÉ
     myTrips: '🎒 My Trips',
     myFavorites: '❤️ My Favorites',
     dashboard: '📊 Dashboard',
@@ -57,6 +60,7 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     languageLabel: 'Language',
     admin: '⚡ ADMIN PROFIT',
     about: '🚀 About Us',
+    explore: '🌍 Explore',
   },
   ar: {
     traveler: 'مسافر',
@@ -65,6 +69,7 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     searchPlaceholder: 'إلى أين تريد الذهاب ؟',
     hostDashboard: 'لوحة المضيف',
     travelerAccount: 'حساب المسافر',
+    mySpace: '🏠 مساحتي', // ✅ AJOUTÉ
     myTrips: '🎒 رحلاتي',
     myFavorites: '❤️ مفضلاتي',
     dashboard: '📊 لوحة التحكم',
@@ -77,6 +82,7 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     languageLabel: 'اللغة',
     admin: '⚡ إدارة الأرباح',
     about: '🚀 حول لوكادز',
+    explore: '🌍 استكشاف',
   },
 };
 
@@ -189,6 +195,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             : 'bg-white shadow-2xl border border-gray-100 w-full max-w-7xl mt-1 md:mt-2'
         }`}
       >
+        {/* Logo */}
         <button
           onClick={() => onGoHome()}
           className="flex items-center gap-2 cursor-pointer group px-2 hover:opacity-80 transition-all active:scale-95 shrink-0"
@@ -215,6 +222,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </button>
 
+        {/* Barre de recherche */}
         <form onSubmit={handleSearchSubmit} className="flex-1 max-w-lg hidden md:block px-4">
           <div className="relative group">
             <input
@@ -252,6 +260,57 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </form>
 
+        {/* ✅ BOUTONS NAVIGATION RAPIDE (pour voyageurs connectés) */}
+        {currentUser && userRole === 'TRAVELER' && (
+          <div className="hidden lg:flex items-center gap-2">
+            {/* Bouton Explorer */}
+            <button
+              onClick={() => onNavigate('EXPLORE')}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+                isScrolled
+                  ? 'text-white/70 hover:text-white hover:bg-white/10'
+                  : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
+              }`}
+            >
+              {t.explore}
+            </button>
+
+            {/* ✅ Bouton Mon Espace (visible) */}
+            <button
+              onClick={() => onNavigate('PROFILE')}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                isScrolled
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg'
+              }`}
+            >
+              <span>🏠</span>
+              <span className="hidden xl:inline">
+                {language === 'ar' ? 'مساحتي' : language === 'en' ? 'My Space' : 'Mon Espace'}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* ✅ BOUTON DASHBOARD HÔTE (pour hôtes connectés) */}
+        {currentUser && userRole === 'HOST' && (
+          <div className="hidden lg:flex items-center gap-2">
+            <button
+              onClick={() => onNavigate('HOST_DASH')}
+              className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                isScrolled
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg'
+              }`}
+            >
+              <span>📊</span>
+              <span className="hidden xl:inline">
+                {language === 'ar' ? 'لوحة التحكم' : language === 'en' ? 'Dashboard' : 'Dashboard'}
+              </span>
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 shrink-0">
           {/* Cloud Status Indicator */}
           <div className="relative group hidden sm:block">
@@ -269,6 +328,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
+          {/* Menu profil */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => (currentUser ? setIsMenuOpen(!isMenuOpen) : onOpenAuth())}
@@ -295,7 +355,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       isScrolled ? 'text-white/40' : 'text-indigo-400'
                     }`}
                   >
-                    {userRole}
+                    {userRole === 'TRAVELER' ? t.traveler : t.host}
                   </span>
                 )}
               </div>
@@ -340,6 +400,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
             </button>
 
+            {/* Menu déroulant */}
             {isMenuOpen && currentUser && (
               <div
                 className={`
@@ -359,16 +420,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   md:rounded-[2.5rem] md:translate-x-0
                 `}
               >
+                {/* Header du menu */}
                 <div
                   className="p-6 rounded-[1.8rem] text-white mb-3 transition-colors duration-1000"
-                  style={{ backgroundColor: accentColor }}
+                  style={{ backgroundColor: userRole === 'HOST' ? '#f59e0b' : accentColor }}
                 >
                   <p className="font-black text-xl italic truncate">
                     {currentUser.full_name} ✨
                   </p>
+                  <p className="text-xs text-white/70 mt-1">
+                    {userRole === 'TRAVELER' ? t.traveler : t.host}
+                  </p>
                 </div>
 
                 <div className="space-y-1">
+                  {/* Admin */}
                   {currentUser.role === 'ADMIN' && (
                     <button
                       onClick={() => handleMenuItemClick('ADMIN')}
@@ -379,6 +445,29 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   )}
 
+                  {/* ✅ Mon Espace (Voyageur seulement) */}
+                  {userRole === 'TRAVELER' && (
+                    <button
+                      onClick={() => handleMenuItemClick('PROFILE')}
+                      className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-purple-600 bg-purple-50 rounded-2xl transition-all flex items-center gap-3"
+                    >
+                      <span>🏠</span>
+                      <span>{t.mySpace}</span>
+                    </button>
+                  )}
+
+                  {/* ✅ Dashboard Hôte (Hôte seulement) */}
+                  {userRole === 'HOST' && (
+                    <button
+                      onClick={() => handleMenuItemClick('HOST_DASH')}
+                      className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 rounded-2xl transition-all flex items-center gap-3"
+                    >
+                      <span>📊</span>
+                      <span>{t.dashboard}</span>
+                    </button>
+                  )}
+
+                  {/* Mes Voyages */}
                   <button
                     onClick={() => handleMenuItemClick('BOOKINGS')}
                     className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
@@ -386,6 +475,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>🎒</span>
                     <span>{t.myTrips}</span>
                   </button>
+
+                  {/* Mes Favoris */}
                   <button
                     onClick={() => handleMenuItemClick('FAVORITES')}
                     className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-gray-700 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
@@ -396,6 +487,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                   <div className="h-[1px] bg-gray-100 my-2 mx-4" />
 
+                  {/* À propos */}
                   <button
                     onClick={() => handleMenuItemClick('ABOUT')}
                     className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
@@ -404,8 +496,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>{t.about}</span>
                   </button>
 
+                  {/* Switch mode */}
                   <button
-                    onClick={() => onSwitchRole()}
+                    onClick={() => {
+                      onSwitchRole();
+                      setIsMenuOpen(false);
+                    }}
                     className="w-full text-left p-4 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-50 rounded-2xl transition-all flex items-center gap-3"
                   >
                     <span>🔄</span>
@@ -415,6 +511,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </span>
                   </button>
 
+                  {/* Sélecteur de langue */}
                   <div className="px-4 py-3 mt-2 border-t border-gray-50">
                     <p className="text-[8px] font-black uppercase text-gray-400 tracking-[0.2em] mb-3">
                       {t.languageLabel}
@@ -422,37 +519,38 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="flex gap-2">
                       <button
                         onClick={() => onLanguageChange('fr')}
-                        className={`flex-1 py-2 rounded-xl text-[9px] font-black ${
+                        className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
                           language === 'fr'
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100'
+                            : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                       >
-                        FR
+                        🇫🇷 FR
                       </button>
                       <button
                         onClick={() => onLanguageChange('en')}
-                        className={`flex-1 py-2 rounded-xl text-[9px] font-black ${
+                        className={`flex-1 py-2 rounded-xl text-[9px] font-black transition-all ${
                           language === 'en'
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100'
+                            : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                       >
-                        EN
+                        🇬🇧 EN
                       </button>
                       <button
                         onClick={() => onLanguageChange('ar')}
-                        className={`flex-1 py-2 rounded-xl text-[10px] font-black ${
+                        className={`flex-1 py-2 rounded-xl text-[10px] font-black transition-all ${
                           language === 'ar'
                             ? 'bg-indigo-600 text-white'
-                            : 'bg-gray-100'
+                            : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                       >
-                        AR
+                        🇩🇿 AR
                       </button>
                     </div>
                   </div>
 
+                  {/* Déconnexion */}
                   <button
                     onClick={() => {
                       onLogout();
