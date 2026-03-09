@@ -60,7 +60,6 @@ const App: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Mapping vue -> URL
   const viewToPath = (view: ActiveView): string => {
     switch (view) {
       case 'ABOUT':
@@ -80,7 +79,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Mapping URL -> vue
   const pathToView = (path: string): ActiveView => {
     switch (path) {
       case '/about':
@@ -100,13 +98,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Charger propriétés + favoris
   const refreshData = async () => {
     const session = authService.getSession();
     setIsLoading(true);
     try {
       const props = await propertyService.getAll();
-
       setProperties(props || []);
 
       if (props && props.length > 0) {
@@ -130,7 +126,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Init session + data
   useEffect(() => {
     const initApp = async () => {
       setIsLoading(true);
@@ -154,7 +149,6 @@ const App: React.FC = () => {
           'Impossible de rafraîchir la session depuis Supabase.',
           e
         );
-
         setCurrentUser(null);
         setUserRole('TRAVELER');
         setShowWelcome(true);
@@ -168,15 +162,12 @@ const App: React.FC = () => {
     };
 
     initApp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 🎨 Couleurs dynamiques par catégorie
   const getAmbientColor = (catId: string): string => {
     return CATEGORY_COLORS[catId]?.primary || '#6366f1';
   };
 
-  // Synchroniser activeView avec l'URL
   useEffect(() => {
     const viewFromPath = pathToView(location.pathname);
 
@@ -239,7 +230,6 @@ const App: React.FC = () => {
     refreshData();
   };
 
-  // Fonction pour naviguer vers une propriété depuis TravelerDashboard
   const handleNavigateToProperty = (propertyId: string) => {
     const prop = properties.find(p => p.id === propertyId);
     if (prop) {
@@ -251,7 +241,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Fonction de déconnexion
   const handleLogout = () => {
     authService.logout();
     setCurrentUser(null);
@@ -270,7 +259,6 @@ const App: React.FC = () => {
     return result;
   }, [selectedCategory, properties, maxPrice, minRating]);
 
-  // Déterminer l'onglet initial du TravelerDashboard selon la vue active
   const getTravelerInitialTab = (): 'home' | 'trips' | 'favorites' | 'profile' => {
     switch (activeView) {
       case 'BOOKINGS':
@@ -311,24 +299,20 @@ const App: React.FC = () => {
         className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
         dir={language === 'ar' ? 'rtl' : 'ltr'}
       >
-        {/* BACKGROUND */}
         <div className="fixed inset-0 -z-10">
           <div
-            className="absolute inset-0 transition-all duration-1000"
+            className="absolute inset-0 transition-all duration-500"
             style={{
               background: `
-                radial-gradient(ellipse at 0% 0%, ${ambientColor}40, transparent 50%),
-                radial-gradient(ellipse at 100% 100%, ${ambientColor}30, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, ${ambientColor}10, transparent 70%),
+                radial-gradient(ellipse at 0% 0%, ${ambientColor}30, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, ${ambientColor}20, transparent 50%),
                 linear-gradient(to bottom right, #020617, #0a0a1a, #020617)
               `,
             }}
           />
-          <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.18]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
         </div>
 
-        {/* APP SHELL ABOUT PUBLIC */}
         <div className="relative z-10 flex flex-col min-h-screen">
           <Navbar
             userRole={userRole}
@@ -351,7 +335,7 @@ const App: React.FC = () => {
             dbStatus={dbStatus}
           />
 
-          <main className="flex-1 transition-all duration-1000 pt-32 pb-40">
+          <main className="flex-1 transition-all duration-500 pt-32 pb-40">
             <div className="px-6 md:px-20 max-w-7xl mx-auto">
               <AboutUs language={language} translations={t} />
               <LegalPages language={language} />
@@ -375,60 +359,51 @@ const App: React.FC = () => {
       className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
       dir={language === 'ar' ? 'rtl' : 'ltr'}
     >
-      {/* 🎨 BACKGROUND DYNAMIQUE SELON LA CATÉGORIE */}
+      {/* 🎨 BACKGROUND OPTIMISÉ MOBILE */}
       <div className="fixed inset-0 -z-10">
-        {/* Gradient principal avec couleur de catégorie */}
+        {/* Gradient principal */}
         <div
-          className="absolute inset-0 transition-all duration-1000 ease-in-out"
+          className="absolute inset-0 transition-all duration-500 ease-out"
           style={{
             background: `
-              radial-gradient(ellipse at 0% 0%, ${ambientColor}40, transparent 50%),
-              radial-gradient(ellipse at 100% 100%, ${ambientColor}30, transparent 50%),
-              radial-gradient(ellipse at 50% 50%, ${ambientColor}10, transparent 70%),
+              radial-gradient(ellipse at 0% 0%, ${ambientColor}30, transparent 50%),
+              radial-gradient(ellipse at 100% 100%, ${ambientColor}20, transparent 50%),
               linear-gradient(to bottom right, #020617, #0a0a1a, #020617)
             `,
           }}
         />
 
-        {/* Image de fond avec flou */}
-        <div className="absolute inset-0 transition-opacity duration-1000 ease-in-out mix-blend-overlay opacity-20">
+        {/* Image de fond - DESKTOP ONLY */}
+        <div className="absolute inset-0 transition-opacity duration-500 mix-blend-overlay opacity-10 hidden md:block">
           <div
-            className="w-full h-full bg-cover bg-center scale-110 blur-2xl transition-all duration-1000"
+            className="w-full h-full bg-cover bg-center scale-105 blur-xl"
             style={{
               backgroundImage: `url(${activeCategory.background_image})`,
             }}
           />
         </div>
 
-        {/* Orbe lumineux principal (suit la couleur) */}
+        {/* Orbe principal - RÉDUIT SUR MOBILE */}
         <div
-          className="absolute -top-40 -left-40 w-[60vw] h-[60vw] rounded-full blur-[150px] opacity-40 transition-all duration-1000"
+          className="absolute -top-20 -left-20 md:-top-32 md:-left-32 w-[70vw] md:w-[45vw] h-[70vw] md:h-[45vw] rounded-full blur-[50px] md:blur-[80px] opacity-25 md:opacity-35 transition-all duration-500"
           style={{
             background: `radial-gradient(circle at 30% 30%, ${ambientColor}, transparent 70%)`,
           }}
         />
 
-        {/* Orbe secondaire */}
+        {/* Orbe secondaire - DESKTOP ONLY */}
         <div
-          className="absolute bottom-[-20%] right-[-15%] w-[50vw] h-[50vw] rounded-full blur-[150px] opacity-25 transition-all duration-1000"
+          className="hidden md:block absolute bottom-[-15%] right-[-10%] w-[35vw] h-[35vw] rounded-full blur-[80px] opacity-20 transition-all duration-500"
           style={{
             background: `radial-gradient(circle at 70% 70%, ${ambientColor}, transparent 70%)`,
           }}
         />
 
-        {/* Orbe central subtil */}
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[40vw] h-[40vw] rounded-full blur-[180px] opacity-15 transition-all duration-1000"
-          style={{
-            background: ambientColor,
-          }}
-        />
+        {/* Grain - RÉDUIT SUR MOBILE */}
+        <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.05] md:opacity-[0.1]" />
 
-        {/* Grain texture */}
-        <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.15]" />
-
-        {/* Gradient overlay pour profondeur */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
       </div>
 
       {/* APP SHELL */}
@@ -493,46 +468,46 @@ const App: React.FC = () => {
               dbStatus={dbStatus}
             />
 
-            <main className="flex-1 transition-all duration-1000 pt-32 pb-40">
+            <main className="flex-1 transition-all duration-500 pt-28 md:pt-32 pb-20 md:pb-40">
               {activeView === 'EXPLORE' && (
-                <div className="space-y-16 animate-in fade-in slide-in-from-bottom-20 duration-1000">
-                  {/* Header avec titre de catégorie */}
-                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
-                    <div className="flex flex-col gap-2 animate-in slide-in-from-left duration-[1200ms]">
-                      <div className="flex items-center gap-6">
+                <div className="space-y-10 md:space-y-16 animate-in fade-in duration-500">
+                  {/* Header */}
+                  <div className="px-4 md:px-20 max-w-[1600px] mx-auto">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-4 md:gap-6">
                         <div
-                          className="h-[2px] w-16 rounded-full transition-all duration-700"
+                          className="h-[2px] w-10 md:w-16 rounded-full transition-all duration-500"
                           style={{ backgroundColor: ambientColor }}
                         />
                         <span
-                          className="text-[10px] font-black uppercase tracking-[0.8em] transition-colors duration-700"
+                          className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.5em] md:tracking-[0.8em] transition-colors duration-500"
                           style={{ color: ambientColor }}
                         >
                           LOCADZ COLLECTION
                         </span>
                       </div>
-                      <h1 className="text-5xl md:text-[8rem] font-black italic tracking-tighter leading-[0.85] uppercase select-none">
+                      <h1 className="text-4xl md:text-[8rem] font-black italic tracking-tighter leading-[0.9] uppercase select-none">
                         <span
-                          className="transition-colors duration-700"
+                          className="transition-colors duration-500"
                           style={{ color: ambientColor }}
                         >
                           {activeCategory.label}
                         </span>
                         <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/60 to-transparent">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/60 to-transparent text-3xl md:text-[6rem]">
                           Signature
                         </span>
                       </h1>
                     </div>
                   </div>
 
-                  {/* Barre de catégories */}
-                  <div className="sticky top-24 z-[100] px-4 md:px-0">
+                  {/* Barre de catégories - OPTIMISÉE MOBILE */}
+                  <div className="sticky top-20 md:top-24 z-[100] px-2 md:px-0">
                     <div 
-                      className="max-w-4xl mx-auto backdrop-blur-2xl border rounded-[3rem] p-2 shadow-[0_30px_80px_rgba(0,0,0,0.5)] transition-all duration-700"
+                      className="max-w-4xl mx-auto backdrop-blur-md md:backdrop-blur-xl border rounded-2xl md:rounded-[3rem] p-1 md:p-2 shadow-lg md:shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-500"
                       style={{
-                        backgroundColor: `${ambientColor}10`,
-                        borderColor: `${ambientColor}30`,
+                        backgroundColor: `${ambientColor}08`,
+                        borderColor: `${ambientColor}20`,
                       }}
                     >
                       <Categories
@@ -545,7 +520,7 @@ const App: React.FC = () => {
                   </div>
 
                   {/* Filtres et listings */}
-                  <div className="px-6 md:px-20 max-w-[1600px] mx-auto">
+                  <div className="px-4 md:px-20 max-w-[1600px] mx-auto">
                     <FilterBar
                       maxPrice={maxPrice}
                       setMaxPrice={setMaxPrice}
@@ -560,17 +535,17 @@ const App: React.FC = () => {
                       accentColor={ambientColor}
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16 mt-12">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-x-8 md:gap-y-16 mt-8 md:mt-12">
                       {filteredProperties.length > 0 ? (
                         filteredProperties.map((p, idx) => (
                           <div
                             key={p.id}
                             onClick={() => setSelectedProperty(p)}
-                            className={`animate-in fade-in zoom-in-95 duration-700 ${
-                              idx % 2 === 1 ? 'md:mt-16' : ''
+                            className={`animate-in fade-in duration-500 ${
+                              idx % 2 === 1 ? 'md:mt-12' : ''
                             }`}
                             style={{
-                              animationDelay: `${idx * 100}ms`,
+                              animationDelay: `${Math.min(idx * 50, 300)}ms`,
                             }}
                           >
                             <ListingCard
@@ -584,16 +559,16 @@ const App: React.FC = () => {
                           </div>
                         ))
                       ) : (
-                        <div className="col-span-full py-40 text-center flex flex-col items-center animate-in fade-in">
-                          <span className="text-8xl mb-6 opacity-20">🔍</span>
+                        <div className="col-span-full py-20 md:py-40 text-center flex flex-col items-center animate-in fade-in">
+                          <span className="text-6xl md:text-8xl mb-4 md:mb-6 opacity-20">🔍</span>
                           <h3 
-                            className="text-3xl font-black italic tracking-tighter uppercase"
+                            className="text-xl md:text-3xl font-black italic tracking-tighter uppercase"
                             style={{ color: `${ambientColor}60` }}
                           >
                             Aucun Trésor Trouvé
                           </h3>
-                          <p className="text-white/40 mt-2 text-sm">
-                            Essayez une autre catégorie ou modifiez les filtres
+                          <p className="text-white/40 mt-2 text-xs md:text-sm">
+                            Essayez une autre catégorie
                           </p>
                         </div>
                       )}
@@ -602,12 +577,11 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              <div className="px-6 md:px-20 max-w-7xl mx-auto">
+              <div className="px-4 md:px-20 max-w-7xl mx-auto">
                 {activeView === 'ADMIN' && currentUser && (
                   <AdminDashboard currentUser={currentUser} />
                 )}
 
-                {/* VOYAGEUR : PROFILE, BOOKINGS, FAVORITES → TravelerDashboard */}
                 {(activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES') && 
                   currentUser && 
                   userRole === 'TRAVELER' && (
@@ -623,7 +597,6 @@ const App: React.FC = () => {
                   />
                 )}
 
-                {/* HÔTE : PROFILE → ProfileSettings */}
                 {activeView === 'PROFILE' && currentUser && userRole === 'HOST' && (
                   <ProfileSettings
                     currentUser={currentUser}
