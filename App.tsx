@@ -40,61 +40,43 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ActiveView>('EXPLORE');
   const [language, setLanguage] = useState<AppLanguage>('fr');
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
-  const [dbStatus, setDbStatus] =
-    useState<'CONNECTING' | 'CONNECTED' | 'ERROR'>('CONNECTING');
+  const [dbStatus, setDbStatus] = useState<'CONNECTING' | 'CONNECTED' | 'ERROR'>('CONNECTING');
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('trending');
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(
-    null
-  );
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [maxPrice, setMaxPrice] = useState(200000);
   const [minRating, setMinRating] = useState(0);
 
   const t = TRANSLATIONS[language];
-
   const location = useLocation();
   const navigate = useNavigate();
 
   const viewToPath = (view: ActiveView): string => {
     switch (view) {
-      case 'ABOUT':
-        return '/about';
-      case 'PROFILE':
-        return '/profile';
-      case 'ADMIN':
-        return '/admin';
-      case 'HOST_DASH':
-        return '/host';
-      case 'BOOKINGS':
-        return '/bookings';
-      case 'FAVORITES':
-        return '/favorites';
-      default:
-        return '/';
+      case 'ABOUT': return '/about';
+      case 'PROFILE': return '/profile';
+      case 'ADMIN': return '/admin';
+      case 'HOST_DASH': return '/host';
+      case 'BOOKINGS': return '/bookings';
+      case 'FAVORITES': return '/favorites';
+      default: return '/';
     }
   };
 
   const pathToView = (path: string): ActiveView => {
     switch (path) {
-      case '/about':
-        return 'ABOUT';
-      case '/profile':
-        return 'PROFILE';
-      case '/admin':
-        return 'ADMIN';
-      case '/host':
-        return 'HOST_DASH';
-      case '/bookings':
-        return 'BOOKINGS';
-      case '/favorites':
-        return 'FAVORITES';
-      default:
-        return 'EXPLORE';
+      case '/about': return 'ABOUT';
+      case '/profile': return 'PROFILE';
+      case '/admin': return 'ADMIN';
+      case '/host': return 'HOST_DASH';
+      case '/bookings': return 'BOOKINGS';
+      case '/favorites': return 'FAVORITES';
+      default: return 'EXPLORE';
     }
   };
 
@@ -104,17 +86,10 @@ const App: React.FC = () => {
     try {
       const props = await propertyService.getAll();
       setProperties(props || []);
-
-      if (props && props.length > 0) {
-        setDbStatus('CONNECTED');
-      } else {
-        setDbStatus('ERROR');
-      }
+      setDbStatus(props && props.length > 0 ? 'CONNECTED' : 'ERROR');
 
       if (session) {
-        const favs = await favoriteService.getUserFavoritePropertyIds(
-          session.id
-        );
+        const favs = await favoriteService.getUserFavoritePropertyIds(session.id);
         setFavoriteIds(favs);
       }
     } catch (e) {
@@ -129,13 +104,11 @@ const App: React.FC = () => {
   useEffect(() => {
     const initApp = async () => {
       setIsLoading(true);
-
       try {
         const freshProfile = await authService.refreshSession();
-
         if (freshProfile) {
           setCurrentUser(freshProfile);
-          setUserRole(freshProfile.role);
+          setUserRole(freshProfile.role === 'HOST' ? 'HOST' : 'TRAVELER');
           setDbStatus('CONNECTED');
         } else {
           setCurrentUser(null);
@@ -145,10 +118,7 @@ const App: React.FC = () => {
           await authService.logout();
         }
       } catch (e) {
-        console.warn(
-          'Impossible de rafraîchir la session depuis Supabase.',
-          e
-        );
+        console.warn('Session refresh error', e);
         setCurrentUser(null);
         setUserRole('TRAVELER');
         setShowWelcome(true);
@@ -160,7 +130,6 @@ const App: React.FC = () => {
         setIsLoading(false);
       }
     };
-
     initApp();
   }, []);
 
@@ -170,15 +139,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const viewFromPath = pathToView(location.pathname);
-
     if (viewFromPath === 'ADMIN' && currentUser?.role !== 'ADMIN') {
       setActiveView('EXPLORE');
-      if (location.pathname !== '/') {
-        navigate('/', { replace: true });
-      }
+      if (location.pathname !== '/') navigate('/', { replace: true });
       return;
     }
-
     setActiveView(viewFromPath);
   }, [location.pathname, currentUser?.role, navigate]);
 
@@ -187,28 +152,19 @@ const App: React.FC = () => {
     return CATEGORIES.find(c => c.id === activeId) || CATEGORIES[0];
   }, [selectedCategory, hoveredCategory]);
 
-  const ambientColor = useMemo(
-    () => getAmbientColor(activeCategory.id),
-    [activeCategory.id]
-  );
+  const ambientColor = useMemo(() => getAmbientColor(activeCategory.id), [activeCategory.id]);
 
   const handleNavigate = (view: ActiveView, closeWelcome: boolean = false) => {
     if (view === 'ADMIN' && currentUser?.role !== 'ADMIN') {
       setActiveView('EXPLORE');
-      if (location.pathname !== '/') {
-        navigate('/', { replace: true });
-      }
+      if (location.pathname !== '/') navigate('/', { replace: true });
       return;
     }
-
     setActiveView(view);
     setShowWelcome(!closeWelcome);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-
     const targetPath = viewToPath(view);
-    if (location.pathname !== targetPath) {
-      navigate(targetPath);
-    }
+    if (location.pathname !== targetPath) navigate(targetPath);
   };
 
   const toggleFavorite = async (propertyId: string) => {
@@ -217,15 +173,13 @@ const App: React.FC = () => {
       return;
     }
     await favoriteService.toggleFavorite(currentUser.id, propertyId);
-    const favs = await favoriteService.getUserFavoritePropertyIds(
-      currentUser.id
-    );
+    const favs = await favoriteService.getUserFavoritePropertyIds(currentUser.id);
     setFavoriteIds(favs);
   };
 
   const handleAuthSuccess = (user: UserProfile) => {
     setCurrentUser(user);
-    setUserRole(user.role);
+    setUserRole(user.role === 'HOST' ? 'HOST' : 'TRAVELER');
     setIsAuthOpen(false);
     refreshData();
   };
@@ -253,79 +207,58 @@ const App: React.FC = () => {
     if (selectedCategory !== 'all' && selectedCategory !== 'trending') {
       result = result.filter(p => p.category === selectedCategory);
     }
-    result = result.filter(
-      p => p.price <= maxPrice && p.rating >= minRating
-    );
+    result = result.filter(p => p.price <= maxPrice && p.rating >= minRating);
     return result;
   }, [selectedCategory, properties, maxPrice, minRating]);
 
   const getTravelerInitialTab = (): 'home' | 'trips' | 'favorites' | 'profile' => {
     switch (activeView) {
-      case 'BOOKINGS':
-        return 'trips';
-      case 'FAVORITES':
-        return 'favorites';
-      case 'PROFILE':
-        return 'home';
-      default:
-        return 'home';
+      case 'BOOKINGS': return 'trips';
+      case 'FAVORITES': return 'favorites';
+      case 'PROFILE': return 'home';
+      default: return 'home';
     }
   };
 
+  // ⭐ Détermine si on affiche TravelerDashboard ou ProfileSettings
+  const showTravelerDashboard = 
+    currentUser && 
+    userRole === 'TRAVELER' && 
+    (activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES');
+
+  const showProfileSettings = 
+    currentUser && 
+    userRole === 'HOST' && 
+    activeView === 'PROFILE';
+
   if (!hasCheckedSession) return null;
 
-  // Page spéciale : réinitialisation de mot de passe
+  // Reset password page
   if (location.pathname === '/reset-password') {
     return (
-      <div
-        className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
-        dir={language === 'ar' ? 'rtl' : 'ltr'}
-      >
-        <div className="fixed inset-0 -z-10">
-          <div className="absolute inset-0 bg-[#050505]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black" />
-        </div>
-        <div className="relative z-10 flex flex-col min-h-screen">
-          <ResetPassword language={language} translations={t} />
-        </div>
+      <div className="min-h-screen bg-[#050505] text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="fixed inset-0 -z-10 bg-[#050505]" />
+        <ResetPassword language={language} translations={t} />
       </div>
     );
   }
 
-  // Page spéciale : /about accessible même sans être connecté
+  // About page (public)
   if (!currentUser && activeView === 'ABOUT') {
     return (
-      <div
-        className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
-        dir={language === 'ar' ? 'rtl' : 'ltr'}
-      >
+      <div className="min-h-screen bg-[#050505] text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <div className="fixed inset-0 -z-10">
-          <div
-            className="absolute inset-0 transition-all duration-500"
-            style={{
-              background: `
-                radial-gradient(ellipse at 0% 0%, ${ambientColor}30, transparent 50%),
-                radial-gradient(ellipse at 100% 100%, ${ambientColor}20, transparent 50%),
-                linear-gradient(to bottom right, #020617, #0a0a1a, #020617)
-              `,
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
+          <div className="absolute inset-0" style={{
+            background: `radial-gradient(ellipse at 0% 0%, ${ambientColor}30, transparent 50%), linear-gradient(to bottom right, #020617, #0a0a1a, #020617)`
+          }} />
         </div>
-
-        <div className="relative z-10 flex flex-col min-h-screen">
+        <div className="relative z-10">
           <Navbar
             userRole={userRole}
             currentUser={null}
             language={language}
             onLanguageChange={setLanguage}
-            onSearch={async q => {
-              const m = await parseSmartSearch(
-                q,
-                CATEGORIES.map(c => c.id)
-              );
-              if (m) setSelectedCategory(m);
-            }}
+            onSearch={async q => { const m = await parseSmartSearch(q, CATEGORIES.map(c => c.id)); if (m) setSelectedCategory(m); }}
             onSwitchRole={() => {}}
             onOpenAuth={() => setIsAuthOpen(true)}
             onLogout={() => {}}
@@ -334,101 +267,46 @@ const App: React.FC = () => {
             accentColor={ambientColor}
             dbStatus={dbStatus}
           />
-
-          <main className="flex-1 transition-all duration-500 pt-32 pb-40">
-            <div className="px-6 md:px-20 max-w-7xl mx-auto">
-              <AboutUs language={language} translations={t} />
-              <LegalPages language={language} />
-            </div>
+          <main className="pt-32 pb-40 px-6 md:px-20 max-w-7xl mx-auto">
+            <AboutUs language={language} translations={t} />
+            <LegalPages language={language} />
           </main>
         </div>
-
-        <AuthModal
-          language={language}
-          isOpen={isAuthOpen}
-          onClose={() => setIsAuthOpen(false)}
-          onSuccess={handleAuthSuccess}
-        />
+        <AuthModal language={language} isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onSuccess={handleAuthSuccess} />
       </div>
     );
   }
 
-  // APP PRINCIPALE
+  // Main app
   return (
-    <div
-      className="min-h-screen bg-[#050505] text-white selection:bg-indigo-500 relative overflow-x-hidden"
-      dir={language === 'ar' ? 'rtl' : 'ltr'}
-    >
-      {/* 🎨 BACKGROUND OPTIMISÉ MOBILE */}
+    <div className="min-h-screen bg-[#050505] text-white relative overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Background */}
       <div className="fixed inset-0 -z-10">
-        {/* Gradient principal */}
-        <div
-          className="absolute inset-0 transition-all duration-500 ease-out"
-          style={{
-            background: `
-              radial-gradient(ellipse at 0% 0%, ${ambientColor}30, transparent 50%),
-              radial-gradient(ellipse at 100% 100%, ${ambientColor}20, transparent 50%),
-              linear-gradient(to bottom right, #020617, #0a0a1a, #020617)
-            `,
-          }}
-        />
-
-        {/* Image de fond - DESKTOP ONLY */}
-        <div className="absolute inset-0 transition-opacity duration-500 mix-blend-overlay opacity-10 hidden md:block">
-          <div
-            className="w-full h-full bg-cover bg-center scale-105 blur-xl"
-            style={{
-              backgroundImage: `url(${activeCategory.background_image})`,
-            }}
-          />
-        </div>
-
-        {/* Orbe principal - RÉDUIT SUR MOBILE */}
-        <div
-          className="absolute -top-20 -left-20 md:-top-32 md:-left-32 w-[70vw] md:w-[45vw] h-[70vw] md:h-[45vw] rounded-full blur-[50px] md:blur-[80px] opacity-25 md:opacity-35 transition-all duration-500"
-          style={{
-            background: `radial-gradient(circle at 30% 30%, ${ambientColor}, transparent 70%)`,
-          }}
-        />
-
-        {/* Orbe secondaire - DESKTOP ONLY */}
-        <div
-          className="hidden md:block absolute bottom-[-15%] right-[-10%] w-[35vw] h-[35vw] rounded-full blur-[80px] opacity-20 transition-all duration-500"
-          style={{
-            background: `radial-gradient(circle at 70% 70%, ${ambientColor}, transparent 70%)`,
-          }}
-        />
-
-        {/* Grain - RÉDUIT SUR MOBILE */}
-        <div className="absolute inset-0 bg-grain pointer-events-none opacity-[0.05] md:opacity-[0.1]" />
-
-        {/* Gradient overlay */}
+        <div className="absolute inset-0 transition-all duration-500" style={{
+          background: `radial-gradient(ellipse at 0% 0%, ${ambientColor}30, transparent 50%), radial-gradient(ellipse at 100% 100%, ${ambientColor}20, transparent 50%), linear-gradient(to bottom right, #020617, #0a0a1a, #020617)`
+        }} />
+        <div className="absolute -top-20 -left-20 md:-top-32 md:-left-32 w-[70vw] md:w-[45vw] h-[70vw] md:h-[45vw] rounded-full blur-[50px] md:blur-[80px] opacity-25 md:opacity-35 transition-all duration-500" style={{
+          background: `radial-gradient(circle at 30% 30%, ${ambientColor}, transparent 70%)`
+        }} />
+        <div className="hidden md:block absolute bottom-[-15%] right-[-10%] w-[35vw] h-[35vw] rounded-full blur-[80px] opacity-20" style={{
+          background: `radial-gradient(circle at 70% 70%, ${ambientColor}, transparent 70%)`
+        }} />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
       </div>
 
-      {/* APP SHELL */}
+      {/* App */}
       <div className="relative z-10 flex flex-col min-h-screen">
         {!currentUser ? (
-          <AuthLanding
-            language={language}
-            onLanguageChange={setLanguage}
-            onOpenAuth={() => setIsAuthOpen(true)}
-            translations={t}
-          />
+          <AuthLanding language={language} onLanguageChange={setLanguage} onOpenAuth={() => setIsAuthOpen(true)} translations={t} />
         ) : showWelcome ? (
           <WelcomeScreen
             currentUser={currentUser}
             currentRole={userRole}
             onSelectRole={role => {
               setUserRole(role);
-              handleNavigate(
-                role === 'HOST' ? 'HOST_DASH' : 'EXPLORE',
-                true
-              );
+              handleNavigate(role === 'HOST' ? 'HOST_DASH' : 'EXPLORE', true);
             }}
-            onNavigate={view =>
-              handleNavigate(view as ActiveView, true)
-            }
+            onNavigate={view => handleNavigate(view as ActiveView, true)}
             language={language}
             translations={t}
           />
@@ -439,77 +317,45 @@ const App: React.FC = () => {
               currentUser={currentUser}
               language={language}
               onLanguageChange={setLanguage}
-              onSearch={async q => {
-                const m = await parseSmartSearch(
-                  q,
-                  CATEGORIES.map(c => c.id)
-                );
-                if (m) setSelectedCategory(m);
-              }}
+              onSearch={async q => { const m = await parseSmartSearch(q, CATEGORIES.map(c => c.id)); if (m) setSelectedCategory(m); }}
               onSwitchRole={() => {
-                const nr =
-                  userRole === 'TRAVELER' ? 'HOST' : 'TRAVELER';
+                const nr = userRole === 'TRAVELER' ? 'HOST' : 'TRAVELER';
                 setUserRole(nr);
-                handleNavigate(
-                  nr === 'HOST' ? 'HOST_DASH' : 'EXPLORE',
-                  true
-                );
+                handleNavigate(nr === 'HOST' ? 'HOST_DASH' : 'EXPLORE', true);
               }}
               onOpenAuth={() => setIsAuthOpen(true)}
               onLogout={handleLogout}
-              onGoHome={() => {
-                setShowWelcome(true);
-                navigate('/');
-              }}
-              onNavigate={v =>
-                handleNavigate(v as ActiveView, true)
-              }
+              onGoHome={() => { setShowWelcome(true); navigate('/'); }}
+              onNavigate={v => handleNavigate(v as ActiveView, true)}
               accentColor={ambientColor}
               dbStatus={dbStatus}
             />
 
-            <main className="flex-1 transition-all duration-500 pt-28 md:pt-32 pb-20 md:pb-40">
+            <main className="flex-1 pt-28 md:pt-32 pb-20 md:pb-40">
+              {/* EXPLORE */}
               {activeView === 'EXPLORE' && (
-                <div className="space-y-10 md:space-y-16 animate-in fade-in duration-500">
-                  {/* Header */}
+                <div className="space-y-10 md:space-y-16">
                   <div className="px-4 md:px-20 max-w-[1600px] mx-auto">
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-4 md:gap-6">
-                        <div
-                          className="h-[2px] w-10 md:w-16 rounded-full transition-all duration-500"
-                          style={{ backgroundColor: ambientColor }}
-                        />
-                        <span
-                          className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.5em] md:tracking-[0.8em] transition-colors duration-500"
-                          style={{ color: ambientColor }}
-                        >
-                          LOCADZ COLLECTION
-                        </span>
-                      </div>
-                      <h1 className="text-4xl md:text-[8rem] font-black italic tracking-tighter leading-[0.9] uppercase select-none">
-                        <span
-                          className="transition-colors duration-500"
-                          style={{ color: ambientColor }}
-                        >
-                          {activeCategory.label}
-                        </span>
-                        <br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/60 to-transparent text-3xl md:text-[6rem]">
-                          Signature
-                        </span>
-                      </h1>
+                    <div className="flex items-center gap-4 md:gap-6 mb-2">
+                      <div className="h-[2px] w-10 md:w-16 rounded-full" style={{ backgroundColor: ambientColor }} />
+                      <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.5em]" style={{ color: ambientColor }}>
+                        LOCADZ COLLECTION
+                      </span>
                     </div>
+                    <h1 className="text-4xl md:text-[8rem] font-black italic tracking-tighter leading-[0.9] uppercase">
+                      <span style={{ color: ambientColor }}>{activeCategory.label}</span>
+                      <br />
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/60 to-transparent text-3xl md:text-[6rem]">
+                        Signature
+                      </span>
+                    </h1>
                   </div>
 
-                  {/* Barre de catégories - OPTIMISÉE MOBILE */}
                   <div className="sticky top-20 md:top-24 z-[100] px-2 md:px-0">
-                    <div 
-                      className="max-w-4xl mx-auto backdrop-blur-md md:backdrop-blur-xl border rounded-2xl md:rounded-[3rem] p-1 md:p-2 shadow-lg md:shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition-all duration-500"
-                      style={{
-                        backgroundColor: `${ambientColor}08`,
-                        borderColor: `${ambientColor}20`,
-                      }}
-                    >
+                    <div className="max-w-4xl mx-auto backdrop-blur-md md:backdrop-blur-xl border rounded-2xl md:rounded-[3rem] p-1 md:p-2 shadow-lg" style={{
+                      backgroundColor: `${ambientColor}08`,
+                      borderColor: `${ambientColor}20`
+                    }}>
                       <Categories
                         selectedCategory={selectedCategory}
                         onSelect={setSelectedCategory}
@@ -519,7 +365,6 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Filtres et listings */}
                   <div className="px-4 md:px-20 max-w-[1600px] mx-auto">
                     <FilterBar
                       maxPrice={maxPrice}
@@ -528,10 +373,7 @@ const App: React.FC = () => {
                       setMinRating={setMinRating}
                       minReviews={0}
                       setMinReviews={() => {}}
-                      onReset={() => {
-                        setMaxPrice(200000);
-                        setMinRating(0);
-                      }}
+                      onReset={() => { setMaxPrice(200000); setMinRating(0); }}
                       accentColor={ambientColor}
                     />
 
@@ -541,35 +383,21 @@ const App: React.FC = () => {
                           <div
                             key={p.id}
                             onClick={() => setSelectedProperty(p)}
-                            className={`animate-in fade-in duration-500 ${
-                              idx % 2 === 1 ? 'md:mt-12' : ''
-                            }`}
-                            style={{
-                              animationDelay: `${Math.min(idx * 50, 300)}ms`,
-                            }}
+                            className={`cursor-pointer ${idx % 2 === 1 ? 'md:mt-12' : ''}`}
                           >
                             <ListingCard
-                              property={{
-                                ...p,
-                                isFavorite: favoriteIds.includes(p.id),
-                              }}
+                              property={{ ...p, isFavorite: favoriteIds.includes(p.id) }}
                               onToggleFavorite={toggleFavorite}
                               accentColor={getAmbientColor(p.category)}
                             />
                           </div>
                         ))
                       ) : (
-                        <div className="col-span-full py-20 md:py-40 text-center flex flex-col items-center animate-in fade-in">
-                          <span className="text-6xl md:text-8xl mb-4 md:mb-6 opacity-20">🔍</span>
-                          <h3 
-                            className="text-xl md:text-3xl font-black italic tracking-tighter uppercase"
-                            style={{ color: `${ambientColor}60` }}
-                          >
-                            Aucun Trésor Trouvé
+                        <div className="col-span-full py-20 text-center">
+                          <span className="text-6xl mb-4 block opacity-20">🔍</span>
+                          <h3 className="text-2xl font-black uppercase" style={{ color: `${ambientColor}60` }}>
+                            Aucun résultat
                           </h3>
-                          <p className="text-white/40 mt-2 text-xs md:text-sm">
-                            Essayez une autre catégorie
-                          </p>
                         </div>
                       )}
                     </div>
@@ -577,61 +405,61 @@ const App: React.FC = () => {
                 </div>
               )}
 
-<div className="px-6 md:px-20 max-w-7xl mx-auto">
-  {/* ADMIN Dashboard */}
-  {activeView === 'ADMIN' && currentUser && (
-    <AdminDashboard currentUser={currentUser} />
-  )}
+              {/* Other views */}
+              <div className="px-4 md:px-20 max-w-7xl mx-auto">
+                {/* ADMIN */}
+                {activeView === 'ADMIN' && currentUser && (
+                  <AdminDashboard currentUser={currentUser} />
+                )}
 
-  {/* VOYAGEUR : PROFILE, BOOKINGS, FAVORITES → TravelerDashboard */}
-  {(activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES') && 
-    currentUser && 
-    userRole === 'TRAVELER' && (
-    <TravelerDashboard
-      travelerId={currentUser.id}
-      travelerName={currentUser.full_name}
-      language={language}
-      onLanguageChange={setLanguage}
-      onRefresh={refreshData}
-      onNavigateToProperty={handleNavigateToProperty}
-      onLogout={handleLogout}
-      initialTab={getTravelerInitialTab()}
-    />
-  )}
+                {/* TRAVELER DASHBOARD */}
+                {showTravelerDashboard && (
+                  <TravelerDashboard
+                    travelerId={currentUser.id}
+                    travelerName={currentUser.full_name}
+                    language={language}
+                    onLanguageChange={setLanguage}
+                    onRefresh={refreshData}
+                    onNavigateToProperty={handleNavigateToProperty}
+                    onLogout={handleLogout}
+                    initialTab={getTravelerInitialTab()}
+                  />
+                )}
 
-  {/* HÔTE ou ADMIN : PROFILE → ProfileSettings */}
-  {activeView === 'PROFILE' && currentUser && userRole !== 'TRAVELER' && (
-    <ProfileSettings
-      currentUser={currentUser}
-      language={language}
-      translations={t}
-      onLogout={handleLogout}
-      onSwitchRole={() => {}}
-    />
-  )}
+                {/* PROFILE SETTINGS (HOST) */}
+                {showProfileSettings && (
+                  <ProfileSettings
+                    currentUser={currentUser}
+                    language={language}
+                    translations={t}
+                    onLogout={handleLogout}
+                    onSwitchRole={() => {}}
+                  />
+                )}
 
-  {/* ABOUT */}
-  {activeView === 'ABOUT' && (
-    <>
-      <AboutUs language={language} translations={t} />
-      <LegalPages language={language} />
-    </>
-  )}
+                {/* ABOUT */}
+                {activeView === 'ABOUT' && (
+                  <>
+                    <AboutUs language={language} translations={t} />
+                    <LegalPages language={language} />
+                  </>
+                )}
 
-  {/* HOST Dashboard */}
-  {activeView === 'HOST_DASH' && currentUser && (
-    <HostDashboard
-      hostId={currentUser.id}
-      hostName={currentUser.full_name}
-      onRefresh={refreshData}
-    />
-  )}
-</div>
+                {/* HOST DASHBOARD */}
+                {activeView === 'HOST_DASH' && currentUser && (
+                  <HostDashboard
+                    hostId={currentUser.id}
+                    hostName={currentUser.full_name}
+                    onRefresh={refreshData}
+                  />
+                )}
+              </div>
             </main>
           </>
         )}
       </div>
 
+      {/* Property detail modal */}
       {selectedProperty && (
         <PropertyDetail
           property={selectedProperty}
@@ -644,6 +472,7 @@ const App: React.FC = () => {
         />
       )}
 
+      {/* Auth modal */}
       <AuthModal
         language={language}
         isOpen={isAuthOpen}
