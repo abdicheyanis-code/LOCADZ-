@@ -577,51 +577,56 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              <div className="px-4 md:px-20 max-w-7xl mx-auto">
-                {activeView === 'ADMIN' && currentUser && (
-                  <AdminDashboard currentUser={currentUser} />
-                )}
+<div className="px-6 md:px-20 max-w-7xl mx-auto">
+  {/* ADMIN Dashboard */}
+  {activeView === 'ADMIN' && currentUser && (
+    <AdminDashboard currentUser={currentUser} />
+  )}
 
-                {(activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES') && 
-                  currentUser && 
-                  userRole === 'TRAVELER' && (
-                  <TravelerDashboard
-                    travelerId={currentUser.id}
-                    travelerName={currentUser.full_name}
-                    language={language}
-                    onLanguageChange={setLanguage}
-                    onRefresh={refreshData}
-                    onNavigateToProperty={handleNavigateToProperty}
-                    onLogout={handleLogout}
-                    initialTab={getTravelerInitialTab()}
-                  />
-                )}
+  {/* VOYAGEUR : PROFILE, BOOKINGS, FAVORITES → TravelerDashboard */}
+  {(activeView === 'PROFILE' || activeView === 'BOOKINGS' || activeView === 'FAVORITES') && 
+    currentUser && 
+    userRole === 'TRAVELER' && (
+    <TravelerDashboard
+      travelerId={currentUser.id}
+      travelerName={currentUser.full_name}
+      language={language}
+      onLanguageChange={setLanguage}
+      onRefresh={refreshData}
+      onNavigateToProperty={handleNavigateToProperty}
+      onLogout={handleLogout}
+      initialTab={getTravelerInitialTab()}
+    />
+  )}
 
-                {activeView === 'PROFILE' && currentUser && userRole === 'HOST' && (
-                  <ProfileSettings
-                    currentUser={currentUser}
-                    language={language}
-                    translations={t}
-                    onLogout={handleLogout}
-                    onSwitchRole={() => {}}
-                  />
-                )}
+  {/* HÔTE ou ADMIN : PROFILE → ProfileSettings */}
+  {activeView === 'PROFILE' && currentUser && userRole !== 'TRAVELER' && (
+    <ProfileSettings
+      currentUser={currentUser}
+      language={language}
+      translations={t}
+      onLogout={handleLogout}
+      onSwitchRole={() => {}}
+    />
+  )}
 
-                {activeView === 'ABOUT' && (
-                  <>
-                    <AboutUs language={language} translations={t} />
-                    <LegalPages language={language} />
-                  </>
-                )}
+  {/* ABOUT */}
+  {activeView === 'ABOUT' && (
+    <>
+      <AboutUs language={language} translations={t} />
+      <LegalPages language={language} />
+    </>
+  )}
 
-                {activeView === 'HOST_DASH' && currentUser && (
-                  <HostDashboard
-                    hostId={currentUser.id}
-                    hostName={currentUser.full_name}
-                    onRefresh={refreshData}
-                  />
-                )}
-              </div>
+  {/* HOST Dashboard */}
+  {activeView === 'HOST_DASH' && currentUser && (
+    <HostDashboard
+      hostId={currentUser.id}
+      hostName={currentUser.full_name}
+      onRefresh={refreshData}
+    />
+  )}
+</div>
             </main>
           </>
         )}
