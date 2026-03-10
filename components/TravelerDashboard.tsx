@@ -15,6 +15,7 @@ import { authService } from '../services/authService';
 import { formatCurrency } from '../services/stripeService';
 import { fetchMyNotifications, markNotificationAsRead } from '../services/notifications';
 import { IdVerificationModal } from './IdVerificationModal';
+import { CancellationModal } from './CancellationModal';
 
 interface TravelerDashboardProps {
   travelerId: string;
@@ -43,12 +44,14 @@ const T: Record<AppLanguage, any> = {
       explore: 'Explorer',
       nights: 'Nuits', trips: 'Voyages', favorites: 'Favoris', upcoming: 'À venir',
       notifs: 'Notifications',
-      payNow: 'Payer maintenant', // ✅ AJOUTÉ
+      payNow: 'Payer maintenant',
     },
     trips: {
       pending: 'En attente', upcoming: 'À venir', history: 'Historique',
       noBooking: 'Aucune réservation', noBookingDesc: 'Réserve ton premier séjour',
       review: 'Avis',
+      cancel: 'Annuler',
+      cancelled: 'Annulées',
     },
     favorites: {
       title: 'Mes favoris', empty: 'Aucun favori', emptyDesc: 'Ajoute des coups de cœur !',
@@ -78,12 +81,14 @@ const T: Record<AppLanguage, any> = {
       explore: 'Explore',
       nights: 'Nights', trips: 'Trips', favorites: 'Favorites', upcoming: 'Upcoming',
       notifs: 'Notifications',
-      payNow: 'Pay now', // ✅ AJOUTÉ
+      payNow: 'Pay now',
     },
     trips: {
       pending: 'Pending', upcoming: 'Upcoming', history: 'History',
       noBooking: 'No bookings', noBookingDesc: 'Book your first stay',
       review: 'Review',
+      cancel: 'Cancel',
+      cancelled: 'Cancelled',
     },
     favorites: {
       title: 'My favorites', empty: 'No favorites', emptyDesc: 'Add some favorites!',
@@ -113,12 +118,14 @@ const T: Record<AppLanguage, any> = {
       explore: 'استكشف',
       nights: 'ليالٍ', trips: 'رحلات', favorites: 'مفضلة', upcoming: 'قادمة',
       notifs: 'إشعارات',
-      payNow: 'ادفع الآن', // ✅ AJOUTÉ
+      payNow: 'ادفع الآن',
     },
     trips: {
       pending: 'انتظار', upcoming: 'قادمة', history: 'السجل',
       noBooking: 'لا حجوزات', noBookingDesc: 'احجز إقامتك الأولى',
       review: 'تقييم',
+      cancel: 'إلغاء',
+      cancelled: 'ملغاة',
     },
     favorites: {
       title: 'المفضلة', empty: 'فارغة', emptyDesc: 'أضف مفضلاتك!',
@@ -148,7 +155,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
   onLogout,
   initialTab = 'home',
 }) => {
-  const navigate = useNavigate(); // ✅ AJOUTÉ
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isVerifModalOpen, setIsVerifModalOpen] = useState(false);
@@ -158,6 +165,9 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ NOUVEAU : État pour le modal d'annulation
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+
   const t = T[language];
   const isRTL = language === 'ar';
   const isVerified = currentUser?.id_verification_status === 'VERIFIED';
@@ -166,34 +176,38 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     setActiveTab(initialTab);
   }, [initialTab]);
 
+  // Charger les données
+  const loadData = async () => {
+    try {
+      const session = authService.getSession();
+      if (session) setCurrentUser(session);
+
+      const userBookings = await bookingService.getUserBookings(travelerId);
+      setBookings(userBookings || []);
+
+      const favIds = await favoriteService.getUserFavoritePropertyIds(travelerId);
+      if (favIds.length > 0) {
+        const props = await Promise.all(favIds.map(id => propertyService.getById(id)));
+        setFavoriteProperties(props.filter((p): p is Property => p !== null));
+      }
+
+      const { data: notifs } = await fetchMyNotifications();
+      if (notifs) setNotifications(notifs);
+    } catch (err) {
+      console.error('TravelerDashboard load error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
 
-    const loadData = async () => {
-      try {
-        const session = authService.getSession();
-        if (session && isMounted) setCurrentUser(session);
-
-        const userBookings = await bookingService.getUserBookings(travelerId);
-        if (isMounted) setBookings(userBookings || []);
-
-        const favIds = await favoriteService.getUserFavoritePropertyIds(travelerId);
-        if (favIds.length > 0 && isMounted) {
-          const props = await Promise.all(favIds.map(id => propertyService.getById(id)));
-          setFavoriteProperties(props.filter((p): p is Property => p !== null));
-        }
-
-        const { data: notifs } = await fetchMyNotifications();
-        if (notifs && isMounted) setNotifications(notifs);
-
-      } catch (err) {
-        console.error('TravelerDashboard load error:', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
+    const initLoad = async () => {
+      if (isMounted) await loadData();
     };
 
-    loadData();
+    initLoad();
 
     const timeout = setTimeout(() => {
       if (isMounted) setIsLoading(false);
@@ -205,6 +219,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     };
   }, [travelerId]);
 
+  // Calculs
   const now = new Date();
   const upcomingTrips = bookings.filter(
     b => new Date(b.start_date) > now && ['APPROVED', 'PAID'].includes(b.status)
@@ -213,6 +228,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     b => new Date(b.end_date) < now && ['APPROVED', 'PAID'].includes(b.status)
   );
   const pendingBookings = bookings.filter(b => b.status === 'PENDING_APPROVAL');
+  const cancelledBookings = bookings.filter(b => b.status === 'CANCELLED');
   const nextTrip = upcomingTrips.sort((a, b) => 
     new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
   )[0];
@@ -224,6 +240,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     return sum + nights;
   }, 0);
 
+  // Niveau
   const getLevel = () => {
     const n = pastTrips.length;
     if (n >= 10) return { name: t.levels.legend, emoji: '🏆', pct: 100 };
@@ -234,6 +251,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
   };
   const level = getLevel();
 
+  // Tabs config
   const tabs: { id: TabType; icon: string; label: string; badge?: number }[] = [
     { id: 'home', icon: '🏠', label: t.tabs.home },
     { id: 'trips', icon: '📅', label: t.tabs.trips, badge: pendingBookings.length || undefined },
@@ -241,6 +259,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     { id: 'profile', icon: '👤', label: t.tabs.profile },
   ];
 
+  // Status colors
   const statusColor: Record<BookingStatus, string> = {
     PENDING_APPROVAL: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     APPROVED: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
@@ -249,24 +268,30 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
     REJECTED: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
   };
 
+  // Supprimer favori
   const handleRemoveFavorite = async (propertyId: string) => {
     await favoriteService.toggleFavorite(travelerId, propertyId);
     setFavoriteProperties(prev => prev.filter(p => p.id !== propertyId));
   };
 
-  // ✅ NOUVELLE FONCTION : Gérer le clic sur une notification
+  // Gérer le clic sur une notification
   const handleNotificationClick = async (notif: Notification) => {
-    // Marquer comme lue
     await markNotificationAsRead(notif.id);
-    
-    // Si c'est une réservation acceptée avec lien de paiement
     if (notif.type === 'booking_accepted' && notif.data?.payment_url) {
       navigate(notif.data.payment_url);
     }
   };
 
+  // ✅ Callback après annulation réussie
+  const handleCancellationSuccess = async () => {
+    await loadData();
+    onRefresh();
+    setCancellingBooking(null);
+  };
+
   return (
     <div className="min-h-screen pb-10" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* HEADER */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-black text-white">
           {t.greeting}, {travelerName.split(' ')[0]} 👋
@@ -276,6 +301,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
         </p>
       </div>
 
+      {/* TABS */}
       <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar">
         {tabs.map(tab => (
           <button
@@ -298,6 +324,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
         ))}
       </div>
 
+      {/* LOADING */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="w-10 h-10 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-4" />
@@ -305,10 +332,13 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
         </div>
       )}
 
+      {/* CONTENT */}
       {!isLoading && (
         <div className="space-y-6">
+          {/* =============== HOME =============== */}
           {activeTab === 'home' && (
             <>
+              {/* Prochain voyage */}
               {nextTrip ? (
                 <div className="bg-gradient-to-br from-purple-600 to-pink-600 p-6 rounded-3xl shadow-xl">
                   <p className="text-white/80 text-sm font-bold mb-1">✈️ {t.home.nextTripIn}</p>
@@ -330,6 +360,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               )}
 
+              {/* Stats */}
               <div className="grid grid-cols-4 gap-3">
                 {[
                   { icon: '🌙', val: totalNights, label: t.home.nights },
@@ -345,6 +376,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 ))}
               </div>
 
+              {/* Niveau */}
               <div className="bg-white/10 border border-white/10 p-5 rounded-2xl">
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-3xl">{level.emoji}</span>
@@ -363,7 +395,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               </div>
 
-              {/* ✅ NOTIFICATIONS MODIFIÉES */}
+              {/* Notifications */}
               {notifications.length > 0 && (
                 <div>
                   <h3 className="text-lg font-black text-white mb-3">🔔 {t.home.notifs}</h3>
@@ -375,7 +407,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                       >
                         <div className="flex gap-3">
                           <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                            {n.type === 'booking_accepted' ? '✅' : n.type === 'booking_rejected' ? '❌' : '📬'}
+                            {n.type === 'booking_accepted' ? '✅' : n.type === 'booking_rejected' || n.type === 'booking_cancelled' ? '❌' : '📬'}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-bold text-white text-sm">{n.title}</p>
@@ -383,7 +415,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                               <p className="text-xs text-white/50 mt-1 line-clamp-2">{n.body}</p>
                             )}
                             
-                            {/* ✅ BOUTON PAYER MAINTENANT */}
+                            {/* Bouton Payer maintenant */}
                             {n.type === 'booking_accepted' && n.data?.payment_url && (
                               <button
                                 onClick={() => handleNotificationClick(n)}
@@ -402,8 +434,10 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
             </>
           )}
 
+          {/* =============== TRIPS =============== */}
           {activeTab === 'trips' && (
             <>
+              {/* En attente */}
               {pendingBookings.length > 0 && (
                 <div>
                   <h3 className="text-lg font-black text-white mb-3">⏳ {t.trips.pending} ({pendingBookings.length})</h3>
@@ -411,13 +445,22 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                     {pendingBookings.map(b => (
                       <div key={b.id} className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-bold text-white">{b.property_title}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-white truncate">{b.property_title}</p>
                             <p className="text-sm text-white/60 mt-1">
-                              📅 {new Date(b.start_date).toLocaleDateString()}
+                              📅 {new Date(b.start_date).toLocaleDateString()} → {new Date(b.end_date).toLocaleDateString()}
                             </p>
                           </div>
-                          <p className="font-bold text-white">{formatCurrency(b.total_price)}</p>
+                          <div className="flex flex-col items-end gap-2 ml-4">
+                            <p className="font-bold text-white">{formatCurrency(b.total_price)}</p>
+                            {/* ✅ Bouton Annuler */}
+                            <button
+                              onClick={() => setCancellingBooking(b)}
+                              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-bold transition-all active:scale-95"
+                            >
+                              {t.trips.cancel}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -425,6 +468,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               )}
 
+              {/* À venir */}
               {upcomingTrips.length > 0 && (
                 <div>
                   <h3 className="text-lg font-black text-white mb-3">🎯 {t.trips.upcoming} ({upcomingTrips.length})</h3>
@@ -432,17 +476,24 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                     {upcomingTrips.map(b => (
                       <div key={b.id} className="bg-white/10 border border-white/10 p-4 rounded-2xl">
                         <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-bold text-white">{b.property_title}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-white truncate">{b.property_title}</p>
                             <p className="text-sm text-white/60 mt-1">
                               📅 {new Date(b.start_date).toLocaleDateString()} → {new Date(b.end_date).toLocaleDateString()}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="flex flex-col items-end gap-2 ml-4">
                             <span className={`px-2 py-1 rounded-lg text-xs font-bold border ${statusColor[b.status]}`}>
                               {t.status[b.status]}
                             </span>
-                            <p className="font-bold text-white mt-2">{formatCurrency(b.total_price)}</p>
+                            <p className="font-bold text-white">{formatCurrency(b.total_price)}</p>
+                            {/* ✅ Bouton Annuler */}
+                            <button
+                              onClick={() => setCancellingBooking(b)}
+                              className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-bold transition-all active:scale-95"
+                            >
+                              {t.trips.cancel}
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -451,6 +502,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               )}
 
+              {/* Historique */}
               {pastTrips.length > 0 && (
                 <div>
                   <h3 className="text-lg font-black text-white mb-3">📚 {t.trips.history} ({pastTrips.length})</h3>
@@ -472,6 +524,36 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               )}
 
+              {/* ✅ Réservations annulées */}
+              {cancelledBookings.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-black text-white mb-3">❌ {t.trips.cancelled} ({cancelledBookings.length})</h3>
+                  <div className="space-y-3">
+                    {cancelledBookings.map(b => (
+                      <div key={b.id} className="bg-white/5 border border-white/10 p-4 rounded-2xl opacity-60">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-bold text-white line-through">{b.property_title}</p>
+                            <p className="text-xs text-white/50">
+                              {new Date(b.start_date).toLocaleDateString()} → {new Date(b.end_date).toLocaleDateString()}
+                            </p>
+                            {b.cancellation_reason && (
+                              <p className="text-xs text-rose-400 mt-1">
+                                Raison : {b.cancellation_reason.replace(/_/g, ' ')}
+                              </p>
+                            )}
+                          </div>
+                          <span className={`px-2 py-1 rounded-lg text-xs font-bold border ${statusColor.CANCELLED}`}>
+                            {t.status.CANCELLED}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Vide */}
               {bookings.length === 0 && (
                 <div className="bg-white/5 border border-white/10 p-8 rounded-3xl text-center">
                   <span className="text-5xl mb-4 block">🧳</span>
@@ -482,6 +564,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
             </>
           )}
 
+          {/* =============== FAVORITES =============== */}
           {activeTab === 'favorites' && (
             <>
               <h3 className="text-lg font-black text-white mb-4">❤️ {t.favorites.title} ({favoriteProperties.length})</h3>
@@ -527,8 +610,10 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
             </>
           )}
 
+          {/* =============== PROFILE =============== */}
           {activeTab === 'profile' && (
             <>
+              {/* Infos utilisateur */}
               <div className="bg-white/10 border border-white/10 p-5 rounded-2xl">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-2xl font-black text-white">
@@ -547,6 +632,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 )}
               </div>
 
+              {/* Langue */}
               <div className="bg-white/10 border border-white/10 p-5 rounded-2xl">
                 <p className="font-bold text-white mb-3">{t.profile.language}</p>
                 <div className="flex gap-2">
@@ -567,6 +653,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               </div>
 
+              {/* Vérification */}
               {!isVerified ? (
                 <div className="bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
@@ -593,6 +680,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 </div>
               )}
 
+              {/* Stats */}
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { val: pastTrips.length, label: t.profile.stats.trips },
@@ -607,6 +695,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
                 ))}
               </div>
 
+              {/* Déconnexion */}
               <button
                 onClick={onLogout}
                 className="w-full py-4 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl font-bold flex items-center justify-center gap-2"
@@ -618,6 +707,7 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
         </div>
       )}
 
+      {/* Modal vérification */}
       {currentUser && (
         <IdVerificationModal
           isOpen={isVerifModalOpen}
@@ -627,6 +717,18 @@ export const TravelerDashboard: React.FC<TravelerDashboardProps> = ({
             setCurrentUser(updated);
             onRefresh();
           }}
+        />
+      )}
+
+      {/* ✅ NOUVEAU : Modal d'annulation */}
+      {cancellingBooking && (
+        <CancellationModal
+          isOpen={!!cancellingBooking}
+          onClose={() => setCancellingBooking(null)}
+          booking={cancellingBooking}
+          userRole="TRAVELER"
+          userId={travelerId}
+          onSuccess={handleCancellationSuccess}
         />
       )}
     </div>
