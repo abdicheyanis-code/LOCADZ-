@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Booking } from '../types';
 import { paymentService } from '../services/paymentService';
 import { formatCurrency } from '../services/stripeService';
 
 export const PaymentPage: React.FC = () => {
-  const { bookingId } = useParams<{ bookingId: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  // ✅ Extraire le bookingId depuis l'URL
+  const bookingId = location.pathname.split('/payment/')[1];
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [propertyTitle, setPropertyTitle] = useState<string>('');
@@ -36,6 +39,7 @@ export const PaymentPage: React.FC = () => {
         .single();
 
       if (fetchError || !data) {
+        console.error('Booking fetch error:', fetchError);
         setError('Réservation introuvable');
         setLoading(false);
         return;
@@ -56,6 +60,7 @@ export const PaymentPage: React.FC = () => {
         }
       }
     } catch (e) {
+      console.error('Load booking error:', e);
       setError('Erreur de chargement');
     } finally {
       setLoading(false);
@@ -100,7 +105,6 @@ export const PaymentPage: React.FC = () => {
 
       setSuccess(true);
       
-      // Rediriger après 3 secondes
       setTimeout(() => {
         navigate('/bookings');
       }, 3000);
@@ -119,6 +123,7 @@ export const PaymentPage: React.FC = () => {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/60">Chargement...</p>
+          <p className="text-white/30 text-xs mt-2">ID: {bookingId}</p>
         </div>
       </div>
     );
@@ -131,7 +136,8 @@ export const PaymentPage: React.FC = () => {
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-center max-w-md">
           <span className="text-5xl mb-4 block">❌</span>
           <h1 className="text-2xl font-black text-white mb-2">Erreur</h1>
-          <p className="text-white/60 mb-6">{error}</p>
+          <p className="text-white/60 mb-4">{error}</p>
+          <p className="text-white/30 text-xs mb-6">ID: {bookingId || 'non défini'}</p>
           <button
             onClick={() => navigate('/')}
             className="px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold"
@@ -164,7 +170,6 @@ export const PaymentPage: React.FC = () => {
 
   if (!booking) return null;
 
-  // Payment method display
   const getPaymentMethodInfo = () => {
     switch (booking.payment_method) {
       case 'PAYPAL':
@@ -182,13 +187,11 @@ export const PaymentPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] py-8 px-4">
-      {/* Background */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-[#050505] to-pink-900/20" />
       </div>
 
       <div className="max-w-lg mx-auto">
-        {/* Header */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-colors"
@@ -264,7 +267,7 @@ export const PaymentPage: React.FC = () => {
           )}
 
           {booking.payment_method === 'PAYPAL' && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 mb-4">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
               <p className="text-yellow-300 text-sm">
                 ⚠️ Le paiement PayPal direct sera bientôt disponible. 
                 Pour l'instant, vous pouvez effectuer un paiement PayPal et envoyer la preuve.
@@ -334,7 +337,6 @@ export const PaymentPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Help */}
         <p className="text-center text-white/40 text-sm mt-6">
           Besoin d'aide ? Contactez notre support
         </p>
