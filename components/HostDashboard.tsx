@@ -17,6 +17,7 @@ import { ALGERIAN_BANKS } from '../constants';
 import { AddPropertyModal } from './AddPropertyModal';
 import { EditPropertyModal } from './EditPropertyModal';
 import { IdVerificationModal } from './IdVerificationModal';
+import { CancellationModal } from './CancellationModal';
 import { fetchMyNotifications } from '../services/notifications';
 
 interface HostDashboardProps {
@@ -115,6 +116,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [isVerifModalOpen, setIsVerifModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
+  // ✅ NOUVEAU : Modal d'annulation
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Booking[]>([]);
@@ -198,6 +202,13 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     }
   };
 
+  // ✅ Callback après annulation
+  const handleCancellationSuccess = async () => {
+    await loadDashboardData();
+    onRefresh();
+    setCancellingBooking(null);
+  };
+
   const handleSavePayout = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -269,14 +280,23 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
 
   const recentNotifications = notifications.slice(0, 5);
 
- // Onglets
-const tabs: { id: TabType; label: string; icon: string }[] = [
-  { id: 'overview', label: "Vue d'ensemble", icon: '📊' },
-  { id: 'properties', label: 'Mes Biens', icon: '🏠' },
-  { id: 'bookings', label: 'Réservations', icon: '📅' },
-  { id: 'revenue', label: 'Revenus', icon: '💰' },
-  { id: 'settings', label: 'Paramètres', icon: '⚙️' },
-];
+  // ✅ Séparer les réservations
+  const upcomingBookings = allBookings.filter(
+    (b) => new Date(b.start_date) > new Date() && ['APPROVED', 'PAID'].includes(b.status)
+  );
+  const pastBookings = allBookings.filter(
+    (b) => new Date(b.end_date) < new Date() && ['APPROVED', 'PAID'].includes(b.status)
+  );
+  const cancelledBookings = allBookings.filter((b) => b.status === 'CANCELLED');
+
+  // Onglets
+  const tabs: { id: TabType; label: string; icon: string }[] = [
+    { id: 'overview', label: "Vue d'ensemble", icon: '📊' },
+    { id: 'properties', label: 'Mes Biens', icon: '🏠' },
+    { id: 'bookings', label: 'Réservations', icon: '📅' },
+    { id: 'revenue', label: 'Revenus', icon: '💰' },
+    { id: 'settings', label: 'Paramètres', icon: '⚙️' },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
@@ -564,35 +584,59 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
 
           {/* 📅 RÉSERVATIONS */}
           {activeTab === 'bookings' && (
-            <div>
-              <h2 className="text-2xl font-black text-white mb-6">
-                Toutes les réservations ({allBookings.length})
-              </h2>
-
-              {allBookings.length === 0 ? (
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center">
-                  <p className="text-white/40 text-lg">Aucune réservation pour le moment</p>
+            <div className="space-y-8">
+              {/* En attente */}
+              {pendingRequests.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-black text-white mb-4">
+                    ⏳ En attente ({pendingRequests.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {pendingRequests.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className="bg-amber-500/10 backdrop-blur-xl border border-amber-500/30 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                      >
+                        <div className="flex-1">
+                          <h3 className="text-lg font-black text-white mb-2">
+                            {booking.property_title || 'Logement'}
+                          </h3>
+                          <p className="text-sm text-white/60 mb-1">
+                            Voyageur : <span className="font-bold text-white">{booking.traveler_name}</span>
+                          </p>
+                          <p className="text-sm text-white/60">
+                            Du {new Date(booking.start_date).toLocaleDateString()} au{' '}
+                            {new Date(booking.end_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleBookingAction(booking.id, 'REJECTED')}
+                            className="px-4 py-2 bg-rose-500/20 border border-rose-500/30 text-rose-300 rounded-xl text-sm font-bold hover:bg-rose-500/30 transition-all"
+                          >
+                            Refuser
+                          </button>
+                          <button
+                            onClick={() => handleBookingAction(booking.id, 'APPROVED')}
+                            className="px-4 py-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 rounded-xl text-sm font-bold hover:bg-emerald-500/30 transition-all"
+                          >
+                            Accepter
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {allBookings.map((booking) => {
-                    const statusColors: Record<BookingStatus, string> = {
-                      PENDING_APPROVAL: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                      APPROVED: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                      PAID: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                      CANCELLED: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
-                      REJECTED: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-                    };
+              )}
 
-                    const statusLabels: Record<BookingStatus, string> = {
-                      PENDING_APPROVAL: 'En attente',
-                      APPROVED: 'Approuvée',
-                      PAID: 'Payée',
-                      CANCELLED: 'Annulée',
-                      REJECTED: 'Refusée',
-                    };
-
-                    return (
+              {/* À venir */}
+              {upcomingBookings.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-black text-white mb-4">
+                    🎯 À venir ({upcomingBookings.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {upcomingBookings.map((booking) => (
                       <div
                         key={booking.id}
                         className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
@@ -602,12 +646,8 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
                             <h3 className="text-lg font-black text-white">
                               {booking.property_title || 'Logement'}
                             </h3>
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                                statusColors[booking.status]
-                              }`}
-                            >
-                              {statusLabels[booking.status]}
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {booking.status === 'PAID' ? '💳 Payée' : '✅ Confirmée'}
                             </span>
                           </div>
                           <p className="text-sm text-white/60 mb-1">
@@ -618,9 +658,50 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
                             {new Date(booking.end_date).toLocaleDateString()}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-indigo-300 mb-1">Votre revenu</p>
+                        <div className="flex flex-col items-end gap-2">
                           <p className="text-2xl font-black text-white">
+                            {formatCurrency(
+                              booking.payout_host != null
+                                ? Number(booking.payout_host)
+                                : Number(booking.total_price) - Number(booking.commission_fee || 0)
+                            )}
+                          </p>
+                          {/* ✅ Bouton Annuler */}
+                          <button
+                            onClick={() => setCancellingBooking(booking)}
+                            className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-bold transition-all active:scale-95"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Passées */}
+              {pastBookings.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-black text-white mb-4">
+                    📚 Historique ({pastBookings.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {pastBookings.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 opacity-70"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-lg font-black text-white">
+                              {booking.property_title || 'Logement'}
+                            </h3>
+                            <p className="text-sm text-white/60">
+                              {new Date(booking.start_date).toLocaleDateString()} - {booking.traveler_name}
+                            </p>
+                          </div>
+                          <p className="text-xl font-black text-white">
                             {formatCurrency(
                               booking.payout_host != null
                                 ? Number(booking.payout_host)
@@ -629,8 +710,51 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
                           </p>
                         </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ✅ Annulées */}
+              {cancelledBookings.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-black text-white mb-4">
+                    ❌ Annulées ({cancelledBookings.length})
+                  </h2>
+                  <div className="space-y-3">
+                    {cancelledBookings.map((booking) => (
+                      <div
+                        key={booking.id}
+                        className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 opacity-50"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-lg font-black text-white line-through">
+                              {booking.property_title || 'Logement'}
+                            </h3>
+                            <p className="text-sm text-white/60">
+                              {new Date(booking.start_date).toLocaleDateString()} → {new Date(booking.end_date).toLocaleDateString()}
+                            </p>
+                            {booking.cancellation_reason && (
+                              <p className="text-xs text-rose-400 mt-1">
+                                Raison : {booking.cancellation_reason.replace(/_/g, ' ')}
+                              </p>
+                            )}
+                          </div>
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                            Annulée
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Vide */}
+              {allBookings.length === 0 && (
+                <div className="bg-white/5 border border-white/10 rounded-3xl p-12 text-center">
+                  <p className="text-white/40 text-lg">Aucune réservation pour le moment</p>
                 </div>
               )}
             </div>
@@ -863,8 +987,6 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
                   </div>
                 </div>
               )}
-
-              {/* Autres paramètres peuvent être ajoutés ici */}
             </div>
           )}
         </div>
@@ -900,6 +1022,18 @@ const tabs: { id: TabType; label: string; icon: string }[] = [
           onRefresh();
         }}
       />
+
+      {/* ✅ NOUVEAU : Modal d'annulation */}
+      {cancellingBooking && (
+        <CancellationModal
+          isOpen={!!cancellingBooking}
+          onClose={() => setCancellingBooking(null)}
+          booking={cancellingBooking}
+          userRole="HOST"
+          userId={hostId}
+          onSuccess={handleCancellationSuccess}
+        />
+      )}
     </div>
   );
 };
