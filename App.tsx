@@ -14,6 +14,8 @@ import { TravelerDashboard } from './components/TravelerDashboard';
 import { AboutUs } from './components/AboutUs';
 import { ProfileSettings } from './components/ProfileSettings';
 import { LegalPages } from './components/LegalPages';
+import { ResetPassword } from './components/ResetPassword';
+import { PaymentPage } from './components/PaymentPage'; // ✅ AJOUTÉ
 import { CATEGORIES, CATEGORY_COLORS } from './constants';
 import { Property, UserRole, UserProfile, AppLanguage } from './types';
 import { authService } from './services/authService';
@@ -21,7 +23,6 @@ import { propertyService } from './services/propertyService';
 import { favoriteService } from './services/favoriteService';
 import { parseSmartSearch } from './services/geminiService';
 import { TRANSLATIONS } from './services/i18n';
-import { ResetPassword } from './components/ResetPassword';
 
 type ActiveView =
   | 'EXPLORE'
@@ -138,6 +139,11 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    // Ignorer les routes spéciales
+    if (location.pathname === '/reset-password' || location.pathname.startsWith('/payment/')) {
+      return;
+    }
+
     const viewFromPath = pathToView(location.pathname);
     if (viewFromPath === 'ADMIN' && currentUser?.role !== 'ADMIN') {
       setActiveView('EXPLORE');
@@ -220,7 +226,6 @@ const App: React.FC = () => {
     }
   };
 
-  // ⭐ Détermine si on affiche TravelerDashboard ou ProfileSettings
   const showTravelerDashboard = 
     currentUser && 
     userRole === 'TRAVELER' && 
@@ -233,12 +238,21 @@ const App: React.FC = () => {
 
   if (!hasCheckedSession) return null;
 
-  // Reset password page
+  // ✅ Reset password page
   if (location.pathname === '/reset-password') {
     return (
       <div className="min-h-screen bg-[#050505] text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <div className="fixed inset-0 -z-10 bg-[#050505]" />
         <ResetPassword language={language} translations={t} />
+      </div>
+    );
+  }
+
+  // ✅ AJOUTÉ : Payment page
+  if (location.pathname.startsWith('/payment/')) {
+    return (
+      <div className="min-h-screen bg-[#050505] text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <PaymentPage />
       </div>
     );
   }
