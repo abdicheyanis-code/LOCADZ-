@@ -10,6 +10,20 @@ export type BookingStatus =
 
 export type PaymentMethod = 'ON_ARRIVAL' | 'BARIDIMOB' | 'RIB' | 'PAYPAL';
 
+// ✅ NOUVEAU : Raisons d'annulation
+export type CancellationReason = 
+  | 'CHANGE_OF_PLANS'
+  | 'FOUND_BETTER_OPTION'
+  | 'PERSONAL_EMERGENCY'
+  | 'HEALTH_ISSUES'
+  | 'TRAVEL_RESTRICTIONS'
+  | 'PROPERTY_ISSUES'
+  | 'HOST_UNRESPONSIVE'
+  | 'GUEST_UNRESPONSIVE'
+  | 'DOUBLE_BOOKING'
+  | 'PRICING_ERROR'
+  | 'OTHER';
+
 export interface Category {
   id: string;
   label: string;
@@ -146,7 +160,13 @@ export interface Booking {
   traveler_name?: string;
   guests_count?: number;
   traveler_birthdate?: string;
-  payment_url?: string; // ✅ AJOUTÉ
+  payment_url?: string;
+  
+  // ✅ NOUVEAU : Champs d'annulation
+  cancelled_at?: string;
+  cancelled_by?: string;
+  cancellation_reason?: CancellationReason;
+  cancellation_details?: string;
 }
 
 export interface Favorite {
@@ -156,10 +176,25 @@ export interface Favorite {
   created_at: string;
 }
 
+// ✅ NOUVEAU : Historique des annulations
+export interface BookingCancellation {
+  id: string;
+  booking_id: string;
+  cancelled_by: string;
+  cancelled_by_role: 'TRAVELER' | 'HOST' | 'ADMIN';
+  reason: CancellationReason;
+  details: string | null;
+  refund_status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'NOT_APPLICABLE';
+  created_at: string;
+}
+
+// -------------------- NOTIFICATIONS --------------------
+
 export type NotificationType =
   | 'booking_created'
   | 'booking_accepted'
   | 'booking_rejected'
+  | 'booking_cancelled'
   | 'verification_approved'
   | 'verification_rejected';
 
