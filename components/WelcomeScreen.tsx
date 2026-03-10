@@ -20,278 +20,246 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
   translations: t,
 }) => {
   const [showContent, setShowContent] = useState(false);
+  const [hoveredRole, setHoveredRole] = useState<'TRAVELER' | 'HOST' | null>(null);
   const isRTL = language === 'ar';
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowContent(true), 500);
+    const timer = setTimeout(() => setShowContent(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
-  const menuItems = [
-    {
-      id: 'EXPLORE' as const,
-      label:
-        language === 'ar'
-          ? 'استكشاف الشبكة'
-          : 'EXPLORER LE RÉSEAU',
-      icon: '🌍',
-      desc:
-        language === 'ar'
-          ? 'اكتشف أفضل العقارات في الجزائر'
-          : "Découvrez l'élite de l'immobilier DZ",
-      color: 'bg-indigo-600',
+  // Traductions
+  const texts = {
+    fr: {
+      welcome: 'BIENVENUE',
+      question: 'Quelle sera votre aventure ?',
+      traveler: 'Voyageur',
+      travelerDesc: 'Explorez des logements uniques à travers toute l\'Algérie',
+      travelerAction: 'Découvrir',
+      host: 'Hôte',
+      hostDesc: 'Partagez votre espace et accueillez des voyageurs du monde entier',
+      hostAction: 'Commencer',
+      about: 'Notre histoire',
+      aboutDesc: 'Découvrez la vision LOCADZ',
     },
-    {
-      id: 'PROFILE' as const,
-      label:
-        language === 'ar'
-          ? 'إعدادات الحساب'
-          : 'PARAMÈTRES PROFIL',
-      icon: '⚙️',
-      desc:
-        language === 'ar'
-          ? 'إدارة هويتك وتفضيلاتك'
-          : 'Gérez votre identité et vos accès',
-      color: 'bg-violet-600',
+    en: {
+      welcome: 'WELCOME',
+      question: 'What will your adventure be?',
+      traveler: 'Traveler',
+      travelerDesc: 'Explore unique stays across Algeria',
+      travelerAction: 'Discover',
+      host: 'Host',
+      hostDesc: 'Share your space and welcome travelers from around the world',
+      hostAction: 'Get started',
+      about: 'Our story',
+      aboutDesc: 'Discover the LOCADZ vision',
     },
-    {
-      id: 'ABOUT' as const,
-      label:
-        language === 'ar'
-          ? 'قصة لوكادز'
-          : 'NOTRE ODYSSÉE',
-      icon: '🚀',
-      desc:
-        language === 'ar'
-          ? 'تعرف على رؤيتنا للمستقبل'
-          : 'Plongez dans notre vision du futur',
-      color: 'bg-zinc-900',
+    ar: {
+      welcome: 'مرحباً',
+      question: 'ما هي مغامرتك القادمة؟',
+      traveler: 'مسافر',
+      travelerDesc: 'اكتشف إقامات فريدة في جميع أنحاء الجزائر',
+      travelerAction: 'استكشف',
+      host: 'مضيف',
+      hostDesc: 'شارك مساحتك واستقبل المسافرين من جميع أنحاء العالم',
+      hostAction: 'ابدأ',
+      about: 'قصتنا',
+      aboutDesc: 'اكتشف رؤية لوكادز',
     },
-  ];
+  };
 
-  const travelerLabel =
-    language === 'ar'
-      ? 'وضع مسافر'
-      : language === 'en'
-      ? 'Traveler mode'
-      : 'Mode Voyageur';
-
-  const hostLabel =
-    language === 'ar'
-      ? 'وضع مضيف'
-      : language === 'en'
-      ? 'Host mode'
-      : 'Mode Hôte';
-
-  const travelerDesc =
-    language === 'ar'
-      ? 'اكتشف و احجز تجارب في جميع أنحاء الجزائر'
-      : language === 'en'
-      ? 'Discover and book stays across Algeria'
-      : 'Découvrez et réservez des séjours partout en Algérie';
-
-  const hostDesc =
-    language === 'ar'
-      ? 'أضف عقارك وابدأ في استقبال المسافرين'
-      : language === 'en'
-      ? 'List your property and host travelers'
-      : 'Ajoutez vos logements et commencez à accueillir';
+  const txt = texts[language];
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center px-6 relative z-10 text-center py-20 overflow-hidden"
+      className="min-h-screen flex flex-col items-center justify-center px-4 md:px-6 relative z-10 py-12 overflow-hidden"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* Background Ambient Effects - Soft Zen */}
+      {/* Background Effects */}
       <div className="absolute inset-0 z-[-1] overflow-hidden bg-[#050505]">
-        <div className="absolute top-[10%] left-[10%] w-[60%] h-[60%] bg-indigo-600/5 rounded-full blur-[150px] animate-drift" />
-        <div
-          className="absolute bottom-[10%] right-[10%] w-[50%] h-[50%] bg-violet-600/5 rounded-full blur-[150px] animate-drift"
-          style={{ animationDelay: '-5s' }}
+        {/* Gradient orbs */}
+        <div 
+          className="absolute top-[5%] left-[5%] w-[70%] h-[70%] rounded-full blur-[180px] transition-all duration-1000"
+          style={{
+            background: hoveredRole === 'TRAVELER' 
+              ? 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)'
+              : hoveredRole === 'HOST'
+              ? 'radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)'
+          }}
         />
-        <div className="absolute inset-0 bg-grain opacity-5" />
+        <div 
+          className="absolute bottom-[5%] right-[5%] w-[60%] h-[60%] rounded-full blur-[180px] transition-all duration-1000"
+          style={{
+            background: hoveredRole === 'HOST' 
+              ? 'radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%)'
+              : hoveredRole === 'TRAVELER'
+              ? 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 70%)'
+          }}
+        />
+        {/* Grain texture */}
+        <div className="absolute inset-0 opacity-[0.015]" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`
+        }} />
       </div>
 
+      {/* Content */}
       <div
-        className={`transition-all duration-[1500ms] transform ${
-          showContent
-            ? 'opacity-100 translate-y-0'
-            : 'opacity-0 translate-y-20'
+        className={`transition-all duration-1000 transform ${
+          showContent ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
         } w-full max-w-4xl`}
       >
-        {/* Header Section */}
-        <div className="mb-16">
-          <div className="inline-block p-1 bg-white/5 rounded-[2.5rem] mb-8 shadow-2xl border border-white/10 animate-slow-zoom">
-            <LocadzLogo className="w-16 h-16" />
+        {/* Header */}
+        <div className="text-center mb-12 md:mb-16">
+          {/* Logo */}
+          <div className="inline-flex items-center justify-center mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-30 animate-pulse" />
+              <div className="relative p-1 bg-gradient-to-br from-white/10 to-white/5 rounded-3xl border border-white/10 shadow-2xl">
+                <LocadzLogo className="w-14 h-14 md:w-16 md:h-16" />
+              </div>
+            </div>
           </div>
-          <h2 className="text-[10px] font-black text-indigo-400/60 uppercase tracking-[0.6em] mb-4">
-            {language === 'ar'
-              ? 'مرحباً بك في عالم لوكادز'
-              : "BIENVENUE DANS L'UNIVERS"}
-          </h2>
-          <h1 className="text-5xl md:text-8xl font-black text-white italic tracking-tighter mb-4 leading-none">
-            {currentUser?.full_name.split(' ')[0]},{' '}
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-transparent">
-              Où commence
-            </span>{' '}
-            l&apos;exceptionnel ?
+
+          {/* Welcome text */}
+          <p className="text-[10px] md:text-xs font-black text-indigo-400/70 uppercase tracking-[0.5em] mb-4">
+            {txt.welcome}, {currentUser?.full_name.split(' ')[0]}
+          </p>
+          
+          <h1 className="text-3xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1]">
+            {txt.question}
           </h1>
         </div>
 
-        {/* ROLE SWITCHER */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
-          {/* Voyageur */}
+        {/* Role Selection Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8 md:mb-12">
+          {/* Voyageur Card */}
           <button
             type="button"
             onClick={() => onSelectRole('TRAVELER')}
-            className={`group relative px-6 py-5 rounded-[2.5rem] border transition-all text-left flex items-center gap-4 ${
-              currentRole === 'TRAVELER'
-                ? 'bg-white text-indigo-950 border-white shadow-2xl'
-                : 'bg-white/5 text-white border-white/10 hover:bg-white/10 hover:-translate-y-1'
-            }`}
+            onMouseEnter={() => setHoveredRole('TRAVELER')}
+            onMouseLeave={() => setHoveredRole(null)}
+            className="group relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem] border border-white/10 p-6 md:p-8 text-left transition-all duration-500 hover:border-indigo-500/50 hover:shadow-[0_0_60px_-15px_rgba(99,102,241,0.5)] active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+            }}
           >
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg ${
-                currentRole === 'TRAVELER'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white/10'
-              }`}
-            >
-              🎒
+            {/* Hover gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            {/* Icon */}
+            <div className="relative mb-6">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl md:rounded-3xl flex items-center justify-center text-3xl md:text-4xl shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                ✈️
+              </div>
+              {/* Floating particles */}
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-400/20 rounded-full blur-sm opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
             </div>
-            <div>
-              <p
-                className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 ${
-                  currentRole === 'TRAVELER'
-                    ? 'text-indigo-500'
-                    : 'text-white/60'
-                }`}
-              >
-                {travelerLabel}
+
+            {/* Text */}
+            <div className="relative">
+              <h3 className="text-2xl md:text-3xl font-black text-white mb-2 group-hover:text-indigo-300 transition-colors duration-300">
+                {txt.traveler}
+              </h3>
+              <p className="text-white/50 text-sm md:text-base leading-relaxed mb-6 group-hover:text-white/70 transition-colors">
+                {txt.travelerDesc}
               </p>
-              <p
-                className={`text-xs font-medium ${
-                  currentRole === 'TRAVELER'
-                    ? 'text-indigo-900'
-                    : 'text-white/60'
-                }`}
-              >
-                {travelerDesc}
-              </p>
+              
+              {/* CTA */}
+              <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm uppercase tracking-wider">
+                <span>{txt.travelerAction}</span>
+                <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
+              </div>
             </div>
+
+            {/* Shine effect */}
+            <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/10 opacity-0 group-hover:opacity-100 group-hover:animate-shine" />
           </button>
 
-          {/* Hôte */}
+          {/* Hôte Card */}
           <button
             type="button"
             onClick={() => onSelectRole('HOST')}
-            className={`group relative px-6 py-5 rounded-[2.5rem] border transition-all text-left flex items-center gap-4 ${
-              currentRole === 'HOST'
-                ? 'bg-white text-indigo-950 border-white shadow-2xl'
-                : 'bg-white/5 text-white border-white/10 hover:bg-white/10 hover:-translate-y-1'
-            }`}
+            onMouseEnter={() => setHoveredRole('HOST')}
+            onMouseLeave={() => setHoveredRole(null)}
+            className="group relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem] border border-white/10 p-6 md:p-8 text-left transition-all duration-500 hover:border-amber-500/50 hover:shadow-[0_0_60px_-15px_rgba(245,158,11,0.5)] active:scale-[0.98]"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+            }}
           >
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-lg ${
-                currentRole === 'HOST'
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-white/10'
-              }`}
-            >
-              🏠
+            {/* Hover gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            {/* Icon */}
+            <div className="relative mb-6">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl md:rounded-3xl flex items-center justify-center text-3xl md:text-4xl shadow-xl group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
+                🏡
+              </div>
+              {/* Floating particles */}
+              <div className="absolute -top-2 -right-2 w-6 h-6 bg-amber-400/20 rounded-full blur-sm opacity-0 group-hover:opacity-100 group-hover:animate-ping" />
             </div>
-            <div>
-              <p
-                className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 ${
-                  currentRole === 'HOST'
-                    ? 'text-amber-500'
-                    : 'text-white/60'
-                }`}
-              >
-                {hostLabel}
+
+            {/* Text */}
+            <div className="relative">
+              <h3 className="text-2xl md:text-3xl font-black text-white mb-2 group-hover:text-amber-300 transition-colors duration-300">
+                {txt.host}
+              </h3>
+              <p className="text-white/50 text-sm md:text-base leading-relaxed mb-6 group-hover:text-white/70 transition-colors">
+                {txt.hostDesc}
               </p>
-              <p
-                className={`text-xs font-medium ${
-                  currentRole === 'HOST'
-                    ? 'text-indigo-900'
-                    : 'text-white/60'
-                }`}
-              >
-                {hostDesc}
-              </p>
+              
+              {/* CTA */}
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-sm uppercase tracking-wider">
+                <span>{txt.hostAction}</span>
+                <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
+              </div>
             </div>
+
+            {/* Shine effect */}
+            <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/10 opacity-0 group-hover:opacity-100 group-hover:animate-shine" />
           </button>
         </div>
 
-        {/* Navigation Menu Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {menuItems.map((item, idx) => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className="group relative bg-white/[0.03] backdrop-blur-3xl border border-white/10 p-8 rounded-[3rem] text-left transition-all duration-700 hover:bg-white/10 hover:-translate-y-3 hover:shadow-2xl overflow-hidden"
-              style={{ transitionDelay: `${idx * 150}ms` }}
-            >
-              <div
-                className={`w-14 h-14 ${item.color} rounded-2xl flex items-center justify-center text-2xl mb-6 shadow-xl group-hover:scale-110 transition-transform duration-700`}
-              >
-                {item.icon}
-              </div>
-              <h3 className="text-white font-black text-lg tracking-tight mb-2 uppercase italic group-hover:text-indigo-300 transition-colors">
-                {item.label}
-              </h3>
-              <p className="text-white/30 text-xs font-medium leading-relaxed">
-                {item.desc}
-              </p>
-
-              <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/5 opacity-0 group-hover:opacity-100 group-hover:animate-shine" />
-            </button>
-          ))}
+        {/* About Us Button */}
+        <div className="flex justify-center">
+          <button
+            onClick={() => onNavigate('ABOUT')}
+            className="group flex items-center gap-3 px-6 py-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+          >
+            <span className="text-lg group-hover:scale-110 transition-transform">🚀</span>
+            <span className="text-white/60 group-hover:text-white/90 font-medium text-sm transition-colors">
+              {txt.about}
+            </span>
+            <span className="text-white/30 group-hover:text-white/60 text-xs transition-colors">
+              — {txt.aboutDesc}
+            </span>
+          </button>
         </div>
 
-        {/* Smart Search Shortcut */}
-        <div className="mt-20 pt-10 border-t border-white/5 max-w-lg mx-auto">
-          <p className="text-white/20 text-[9px] font-black uppercase tracking-[0.4em] mb-6">
-            Accès Rapide Conciergerie
-          </p>
-          <div className="flex justify-center gap-12 opacity-30 hover:opacity-100 transition-all duration-700">
-            <div
-              className="text-center group cursor-pointer"
-              onClick={() => onNavigate('EXPLORE')}
-            >
-              <p className="text-2xl mb-1 group-hover:scale-125 transition-transform">
-                🏖️
-              </p>
-              <p className="text-[8px] font-black text-white uppercase tracking-widest">
-                Mer
-              </p>
-            </div>
-            <div
-              className="text-center group cursor-pointer"
-              onClick={() => onNavigate('EXPLORE')}
-            >
-              <p className="text-2xl mb-1 group-hover:scale-125 transition-transform">
-                🏜️
-              </p>
-              <p className="text-[8px] font-black text-white uppercase tracking-widest">
-                Sahara
-              </p>
-            </div>
-            <div
-              className="text-center group cursor-pointer"
-              onClick={() => onNavigate('EXPLORE')}
-            >
-              <p className="text-2xl mb-1 group-hover:scale-125 transition-transform">
-                🏔️
-              </p>
-              <p className="text-[8px] font-black text-white uppercase tracking-widest">
-                Montagne
-              </p>
-            </div>
+        {/* Bottom decoration */}
+        <div className="mt-16 flex justify-center">
+          <div className="flex items-center gap-2 opacity-20">
+            <div className="w-1 h-1 rounded-full bg-white" />
+            <div className="w-8 h-[1px] bg-gradient-to-r from-white to-transparent" />
+            <span className="text-[8px] font-bold text-white uppercase tracking-[0.3em]">LOCADZ</span>
+            <div className="w-8 h-[1px] bg-gradient-to-l from-white to-transparent" />
+            <div className="w-1 h-1 rounded-full bg-white" />
           </div>
         </div>
       </div>
+
+      {/* CSS for shine animation */}
+      <style>{`
+        @keyframes shine {
+          100% {
+            left: 125%;
+          }
+        }
+        .group:hover .group-hover\\:animate-shine {
+          animation: shine 0.75s ease-in-out;
+        }
+      `}</style>
     </div>
   );
 };
