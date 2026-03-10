@@ -16,6 +16,7 @@ import { ReviewSection } from './ReviewSection';
 import L from 'leaflet';
 import { useNotification } from './NotificationProvider';
 import { supabase } from '../supabaseClient';
+import { ShareButton } from './ShareButton';
 
 interface PropertyDetailProps {
   property: Property;
@@ -294,15 +295,21 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent hidden md:block" />
 
-          {/* Close button */}
-          <button
-            onClick={handleSafeClose}
-            className="absolute top-4 left-4 md:top-6 md:left-6 z-50 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-xl text-white rounded-full transition-all hover:scale-110 active:scale-95 border border-white/10"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+         {/* Close button */}
+<button
+  onClick={handleSafeClose}
+  className={`absolute top-4 ${isRTL ? 'right-4 md:right-6' : 'left-4 md:left-6'} z-50 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-xl text-white rounded-full transition-all hover:scale-110 active:scale-95 border border-white/10`}
+>
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+</button>
+
+{/* ✅ NOUVEAU : Share button */}
+<ShareButton
+  property={property}
+  className={`absolute top-4 ${isRTL ? 'left-4 md:left-6' : 'right-4 md:right-6'} z-50`}
+/>
 
           {/* Image counter */}
           {property.images.length > 1 && (
