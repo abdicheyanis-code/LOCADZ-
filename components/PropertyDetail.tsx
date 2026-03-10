@@ -49,21 +49,21 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
         [property.latitude, property.longitude],
         13
       );
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       }).addTo(mapRef.current);
 
       const customIcon = L.divIcon({
         className: 'custom-div-icon',
-        html: `<div style="background: linear-gradient(135deg, #6366f1, #a855f7); width: 48px; height: 48px; border-radius: 50%; border: 4px solid white; box-shadow: 0 8px 30px rgba(99,102,241,0.4); display: flex; align-items: center; justify-content: center; font-size: 24px;">🏠</div>`,
-        iconSize: [48, 48],
-        iconAnchor: [24, 24],
+        html: `<div style="background: linear-gradient(135deg, #6366f1, #ec4899); width: 52px; height: 52px; border-radius: 50%; border: 4px solid rgba(255,255,255,0.9); box-shadow: 0 8px 32px rgba(99,102,241,0.6); display: flex; align-items: center; justify-content: center; font-size: 24px; animation: pulse 2s infinite;">🏠</div>`,
+        iconSize: [52, 52],
+        iconAnchor: [26, 26],
       });
 
       L.marker([property.latitude, property.longitude], { icon: customIcon })
         .addTo(mapRef.current)
         .bindPopup(
-          `<div style="font-family: 'Inter', sans-serif; font-weight: 800; color: #1e1b4b; font-size: 14px;">${property.title}</div>`
+          `<div style="font-family: 'Inter', sans-serif; font-weight: 800; color: #1e1b4b; font-size: 14px; padding: 4px;">${property.title}</div>`
         )
         .openPopup();
     }
@@ -78,13 +78,15 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
 
   return (
     <div className="w-full animate-in fade-in zoom-in-95 duration-700">
-      <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-wider text-indigo-600 mb-1">
-            📍 Emplacement
-          </p>
-          <p className="text-sm font-bold text-gray-700">{property.location}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">Position approximative pour votre confidentialité</p>
+      <div className="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-lg shadow-lg">
+            📍
+          </div>
+          <div>
+            <p className="text-white font-black text-sm">{property.location}</p>
+            <p className="text-white/40 text-[10px] mt-0.5">Position approximative</p>
+          </div>
         </div>
         
         {property.maps_url && (
@@ -92,21 +94,20 @@ const PropertyMap: React.FC<{ property: Property }> = ({ property }) => {
             href={property.maps_url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg hover:shadow-xl hover:scale-105 transition-all active:scale-95"
+            className="group inline-flex items-center gap-2 px-5 py-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white rounded-2xl font-bold text-xs transition-all hover:scale-105 active:scale-95"
           >
             <span>🗺️</span>
-            <span>Ouvrir dans Google Maps</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span>Google Maps</span>
+            <svg className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
           </a>
         )}
       </div>
 
-      <div className="h-[400px] md:h-[500px] rounded-3xl overflow-hidden shadow-2xl border-2 border-indigo-100 relative group">
+      <div className="h-[350px] md:h-[450px] rounded-3xl overflow-hidden shadow-2xl border border-white/10 relative">
         <div ref={mapContainerRef} className="w-full h-full" />
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 pointer-events-none rounded-3xl border-2 border-white/5" />
       </div>
     </div>
   );
@@ -137,8 +138,19 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       setGuestsCount(1);
       setBirthdate('');
       setPaymentMethod('BARIDIMOB');
+      setStartDate('');
+      setEndDate('');
     }
-  }, [isOpen, property.host_id]);
+  }, [isOpen, property.id]);
+
+  // Auto-slide images
+  useEffect(() => {
+    if (!isOpen || property.images.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentImg(prev => (prev + 1) % property.images.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isOpen, property.images.length]);
 
   const nights = useMemo(() => {
     if (!startDate || !endDate) return 0;
@@ -174,7 +186,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       return;
     }
     if (!birthdate) {
-      notify({ type: 'error', message: 'Merci de saisir la date de naissance du voyageur principal.' });
+      notify({ type: 'error', message: 'Merci de saisir la date de naissance.' });
       setStep('DATES');
       return;
     }
@@ -192,7 +204,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
         .eq('start_date', startDate)
         .eq('end_date', endDate);
     } catch (e) {
-      console.warn('Cleanup ancienne réservation PENDING échouée :', e);
+      console.warn('Cleanup error:', e);
     }
 
     const isAvail = await bookingService.isRangeAvailable(
@@ -202,7 +214,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
     );
 
     if (!isAvail) {
-      notify({ type: 'error', message: "Désolé, ces dates viennent d'être bloquées par un autre voyageur." });
+      notify({ type: 'error', message: "Ces dates ne sont plus disponibles." });
       setStep('DATES');
       setIsBlocking(false);
       return;
@@ -229,15 +241,15 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
       });
 
       if (newBooking) {
-        notify({ type: 'success', message: 'Demande de réservation envoyée.' });
+        notify({ type: 'success', message: 'Demande envoyée !' });
         setStep('SUCCESS');
         onBookingSuccess();
       } else {
-        notify({ type: 'error', message: "Impossible de créer la réservation, veuillez réessayer." });
+        notify({ type: 'error', message: "Erreur, veuillez réessayer." });
         setStep('CONFIRMATION');
       }
     } else {
-      notify({ type: 'error', message: 'La simulation de demande a échoué, veuillez réessayer.' });
+      notify({ type: 'error', message: 'Erreur, veuillez réessayer.' });
       setStep('CONFIRMATION');
     }
 
@@ -248,484 +260,503 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-0 md:p-4"
+      className="fixed inset-0 z-[200] flex items-end md:items-center justify-center"
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {/* Backdrop */}
+      {/* Backdrop avec blur intense */}
       <div
-        className="absolute inset-0 bg-gradient-to-br from-indigo-950/60 via-purple-950/40 to-black/60 backdrop-blur-xl animate-in fade-in duration-500"
+        className="absolute inset-0 bg-black/80 backdrop-blur-2xl animate-in fade-in duration-300"
         onClick={handleSafeClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-6xl h-[100dvh] md:h-[92vh] bg-white md:rounded-[3rem] shadow-[0_60px_150px_rgba(0,0,0,0.6)] border-none md:border-2 md:border-white/20 overflow-hidden flex flex-col md:flex-row animate-in slide-in-from-bottom-20 md:zoom-in-95 duration-500">
+      {/* Modal Container */}
+      <div className="relative w-full h-[100dvh] md:h-[95vh] md:max-w-7xl md:mx-4 flex flex-col md:flex-row overflow-hidden animate-in slide-in-from-bottom-8 md:zoom-in-95 duration-500">
         
-        {/* Bouton fermer */}
-        <button
-          onClick={handleSafeClose}
-          className={`absolute top-4 md:top-6 ${isRTL ? 'right-4 md:right-6' : 'left-4 md:left-6'} z-50 w-12 h-12 flex items-center justify-center bg-white/90 backdrop-blur-md hover:bg-white text-gray-900 rounded-2xl transition-all shadow-xl hover:shadow-2xl active:scale-90 group border border-gray-200`}
-        >
-          <svg
-            className={`w-5 h-5 transition-transform group-hover:scale-110 ${isRTL ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-
-        {/* ========== GALERIE ========== */}
-        <div className="w-full md:w-[55%] h-[35vh] md:h-full relative overflow-hidden bg-gradient-to-br from-gray-900 to-black group/gallery">
-          {/* Images slider */}
+        {/* ========== GALERIE PLEIN ÉCRAN ========== */}
+        <div className="relative w-full md:w-[55%] h-[40vh] md:h-full overflow-hidden md:rounded-l-[2.5rem]">
+          {/* Images */}
           <div
-            className="absolute inset-0 flex transition-transform duration-700 ease-out"
+            className="absolute inset-0 flex transition-transform duration-1000 ease-out"
             style={{ transform: `translateX(-${currentImg * 100}%)` }}
           >
             {property.images.map((img, idx) => (
-              <div key={img.id} className="w-full h-full flex-shrink-0 relative">
+              <div key={img.id} className="relative w-full h-full flex-shrink-0">
                 <img
                   src={img.image_url}
                   className="w-full h-full object-cover"
-                  alt={`${property.title} - Image ${idx + 1}`}
+                  alt={`${property.title} - ${idx + 1}`}
                 />
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               </div>
             ))}
           </div>
 
-          {/* Navigation dots */}
+          {/* Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent hidden md:block" />
+
+          {/* Close button */}
+          <button
+            onClick={handleSafeClose}
+            className="absolute top-4 left-4 md:top-6 md:left-6 z-50 w-11 h-11 flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-xl text-white rounded-full transition-all hover:scale-110 active:scale-95 border border-white/10"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Image counter */}
           {property.images.length > 1 && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-              {property.images.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentImg(idx)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    idx === currentImg 
-                      ? 'w-8 bg-white' 
-                      : 'w-1.5 bg-white/40 hover:bg-white/60'
-                  }`}
-                />
-              ))}
+            <div className="absolute top-4 right-4 md:top-6 md:right-6 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-full text-white text-xs font-bold border border-white/10">
+              {currentImg + 1} / {property.images.length}
             </div>
           )}
 
-          {/* Infos bottom */}
-          <div className={`absolute bottom-8 ${isRTL ? 'right-6 md:right-10' : 'left-6 md:left-10'} pointer-events-none max-w-[90%] md:max-w-[70%]`}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="px-3 py-1 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider rounded-full">
+          {/* Property info overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+            {/* Badges */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="px-3 py-1.5 bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-wider rounded-full border border-white/20">
                 {property.category}
               </span>
-              <span className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black rounded-full flex items-center gap-1">
-                <span>⭐</span>
-                <span>{property.rating}</span>
+              <span className="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black rounded-full flex items-center gap-1 shadow-lg">
+                ⭐ {property.rating}
+                <span className="opacity-70">({property.reviews_count})</span>
               </span>
+              {property.isHostVerified && (
+                <span className="px-3 py-1.5 bg-emerald-500/20 backdrop-blur-md text-emerald-300 text-[10px] font-black rounded-full border border-emerald-500/30">
+                  ✓ Hôte vérifié
+                </span>
+              )}
             </div>
-            
-            <h2 className="text-3xl md:text-6xl font-black text-white tracking-tight leading-[1.1] drop-shadow-2xl mb-3">
-              {property.title}
-            </h2>
-            
-            <p className="text-white/90 font-bold text-sm md:text-lg flex items-center gap-2">
-              <span>📍</span> 
-              <span>{property.location}</span>
-            </p>
 
-            <div className="mt-4 flex items-center gap-3">
-              <div className="px-4 py-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/20">
-                <p className="text-white/60 text-[9px] font-bold uppercase tracking-wide">À partir de</p>
-                <p className="text-white text-2xl font-black">{formatCurrency(property.price)}<span className="text-sm font-normal">/nuit</span></p>
-              </div>
+            {/* Title */}
+            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tight mb-3">
+              {property.title}
+            </h1>
+
+            {/* Location */}
+            <div className="flex items-center gap-2 text-white/80 mb-4">
+              <span className="text-lg">📍</span>
+              <span className="font-medium">{property.location}</span>
             </div>
+
+            {/* Price badge */}
+            <div className="inline-flex items-baseline gap-1 px-5 py-3 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20">
+              <span className="text-3xl md:text-4xl font-black text-white">{formatCurrency(property.price)}</span>
+              <span className="text-white/60 font-medium text-sm">/nuit</span>
+            </div>
+
+            {/* Dots navigation */}
+            {property.images.length > 1 && (
+              <div className="flex gap-1.5 mt-6">
+                {property.images.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentImg(idx)}
+                    className={`h-1 rounded-full transition-all duration-500 ${
+                      idx === currentImg 
+                        ? 'w-8 bg-white' 
+                        : 'w-1 bg-white/30 hover:bg-white/50'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* ========== PANNEAU DROIT ========== */}
-        <div className="w-full md:w-[45%] flex flex-col bg-gradient-to-br from-gray-50 to-white overflow-y-auto no-scrollbar relative">
-          <div className="p-6 md:p-10 space-y-6 flex-1">
-            
-            {/* Tabs OVERVIEW/MAP/REVIEWS */}
-            {(step === 'OVERVIEW' || step === 'REVIEWS' || step === 'MAP') && (
-              <div className="flex bg-gray-100 p-1 rounded-2xl sticky top-0 z-10">
-                <button
-                  onClick={() => setStep('OVERVIEW')}
-                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${
-                    step === 'OVERVIEW'
-                      ? 'bg-white shadow-lg text-indigo-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Détails
-                </button>
-                <button
-                  onClick={() => setStep('MAP')}
-                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${
-                    step === 'MAP'
-                      ? 'bg-white shadow-lg text-indigo-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Carte
-                </button>
-                <button
-                  onClick={() => setStep('REVIEWS')}
-                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${
-                    step === 'REVIEWS'
-                      ? 'bg-white shadow-lg text-indigo-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Avis
-                </button>
-              </div>
-            )}
+        {/* ========== PANNEAU DROIT - DARK GLASS ========== */}
+        <div className="relative w-full md:w-[45%] flex-1 md:flex-none md:h-full overflow-hidden md:rounded-r-[2.5rem] bg-[#0a0a0f]">
+          {/* Background effects */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute top-0 right-0 w-[80%] h-[60%] bg-gradient-to-bl from-indigo-600/10 via-purple-600/5 to-transparent rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-[60%] h-[40%] bg-gradient-to-tr from-pink-600/10 via-transparent to-transparent rounded-full blur-3xl" />
+          </div>
 
-            {/* ========== OVERVIEW ========== */}
-            {step === 'OVERVIEW' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-indigo-600 mb-2">📝 Description</h3>
-                  <p className="text-gray-700 leading-relaxed text-base italic">
-                    &quot;{property.description}&quot;
-                  </p>
+          {/* Content */}
+          <div className="relative h-full overflow-y-auto no-scrollbar">
+            <div className="p-6 md:p-8 space-y-6">
+              
+              {/* ========== TABS ========== */}
+              {(step === 'OVERVIEW' || step === 'REVIEWS' || step === 'MAP') && (
+                <div className="flex p-1 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10">
+                  {[
+                    { id: 'OVERVIEW', label: 'Aperçu', icon: '✨' },
+                    { id: 'MAP', label: 'Carte', icon: '🗺️' },
+                    { id: 'REVIEWS', label: 'Avis', icon: '💬' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setStep(tab.id as Step)}
+                      className={`flex-1 py-3 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                        step === tab.id
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                          : 'text-white/50 hover:text-white/80'
+                      }`}
+                    >
+                      <span>{tab.icon}</span>
+                      <span className="hidden sm:inline">{tab.label}</span>
+                    </button>
+                  ))}
                 </div>
+              )}
 
-                {/* Amenities (si dispo) */}
-                {property.amenities && property.amenities.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider text-indigo-600 mb-3">✨ Équipements</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      {property.amenities.slice(0, 6).map((amenity, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg text-sm text-gray-700">
-                          <span className="text-indigo-500">✓</span>
-                          <span className="font-medium">{amenity}</span>
-                        </div>
-                      ))}
+              {/* ========== OVERVIEW ========== */}
+              {step === 'OVERVIEW' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  {/* Description */}
+                  <div className="relative">
+                    <div className="absolute -left-3 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 via-purple-500 to-pink-500 rounded-full" />
+                    <p className="text-white/70 leading-relaxed text-sm md:text-base italic pl-4">
+                      "{property.description}"
+                    </p>
+                  </div>
+
+                  {/* Stats grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="group relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-indigo-500/30 transition-all">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-wider mb-1 relative">Prix / nuit</p>
+                      <p className="text-2xl font-black text-white relative">{formatCurrency(property.price)}</p>
+                      <p className="text-[10px] text-white/40 mt-1 relative">≈ {formatCurrencyEURFromDZD(property.price)}</p>
+                    </div>
+                    
+                    <div className="group relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 hover:border-amber-500/30 transition-all">
+                      <div className="absolute inset-0 bg-gradient-to-br from-amber-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <p className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-1 relative">Évaluation</p>
+                      <p className="text-2xl font-black text-white relative">{property.rating} ⭐</p>
+                      <p className="text-[10px] text-white/40 mt-1 relative">{property.reviews_count} avis vérifiés</p>
                     </div>
                   </div>
-                )}
 
-                {/* Stats */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-5 rounded-2xl border border-indigo-100 shadow-sm">
-                    <p className="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-1">Prix / nuit</p>
-                    <p className="text-2xl font-black text-indigo-950">{formatCurrency(property.price)}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-5 rounded-2xl border border-amber-100 shadow-sm">
-                    <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-1">Évaluation</p>
-                    <p className="text-2xl font-black text-amber-700">{property.rating} ⭐</p>
-                    <p className="text-[9px] text-gray-500 mt-0.5">{property.reviews_count} avis</p>
-                  </div>
+                  {/* Amenities */}
+                  {property.amenities && property.amenities.length > 0 && (
+                    <div>
+                      <p className="text-xs font-black text-white/50 uppercase tracking-wider mb-3">Équipements</p>
+                      <div className="flex flex-wrap gap-2">
+                        {property.amenities.slice(0, 6).map((amenity, idx) => (
+                          <span 
+                            key={idx} 
+                            className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-xs text-white/70 font-medium"
+                          >
+                            {amenity}
+                          </span>
+                        ))}
+                        {property.amenities.length > 6 && (
+                          <span className="px-3 py-2 bg-indigo-500/20 border border-indigo-500/30 rounded-xl text-xs text-indigo-300 font-bold">
+                            +{property.amenities.length - 6}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => setStep('DATES')}
+                    className="group relative w-full py-5 overflow-hidden rounded-2xl font-black uppercase tracking-wider transition-all active:scale-[0.98]"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 transition-all" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml,...')] opacity-10" />
+                    <span className="relative text-white flex items-center justify-center gap-2 text-sm">
+                      <span>Réserver maintenant</span>
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </span>
+                  </button>
                 </div>
+              )}
 
-                <button
-                  onClick={() => setStep('DATES')}
-                  className="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-black uppercase tracking-wider shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <span>🎯</span>
-                  <span>Réserver ce séjour</span>
-                </button>
-              </div>
-            )}
+              {/* ========== DATES ========== */}
+              {step === 'DATES' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <button
+                    onClick={() => setStep('OVERVIEW')}
+                    className="flex items-center gap-2 text-white/50 hover:text-white font-bold text-sm transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Retour</span>
+                  </button>
 
-            {/* ========== DATES ========== */}
-            {step === 'DATES' && (
-              <div className="animate-in slide-in-from-right duration-500 space-y-6">
-                <button
-                  onClick={() => setStep('OVERVIEW')}
-                  className="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:text-indigo-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  <span>Retour</span>
-                </button>
+                  <div>
+                    <h3 className="text-2xl font-black text-white mb-1">Votre séjour</h3>
+                    <p className="text-sm text-white/40">Sélectionnez vos dates et informations</p>
+                  </div>
 
-                <div>
-                  <h3 className="text-2xl font-black text-gray-900 mb-1">Dates & voyageurs</h3>
-                  <p className="text-sm text-gray-500">Remplissez les informations de votre séjour</p>
-                </div>
-
-                <div className="space-y-4">
                   {/* Dates */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-black text-gray-700 uppercase mb-2">📅 Arrivée</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-bold text-white/60">
+                        <span>📅</span> Arrivée
+                      </label>
                       <input
                         type="date"
                         value={startDate}
                         min={todayStr}
                         onChange={e => setStartDate(e.target.value)}
-                        className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-sm font-bold text-gray-900 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-black text-gray-700 uppercase mb-2">📅 Départ</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-bold text-white/60">
+                        <span>📅</span> Départ
+                      </label>
                       <input
                         type="date"
                         value={endDate}
                         min={startDate || todayStr}
                         onChange={e => setEndDate(e.target.value)}
-                        className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-sm font-bold text-gray-900 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Nombre voyageurs */}
-                  <div>
-                    <label className="block text-xs font-black text-gray-700 uppercase mb-2">👥 Nombre de voyageurs</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={20}
-                      value={guestsCount}
-                      onChange={e => setGuestsCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
-                      className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-sm font-bold text-gray-900 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
-                    />
-                    <p className="text-[10px] text-gray-400 mt-1.5">Maximum 20 personnes</p>
+                  {/* Guests */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/60">
+                      <span>👥</span> Nombre de voyageurs
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setGuestsCount(Math.max(1, guestsCount - 1))}
+                        className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-white/10 transition-all active:scale-95"
+                      >
+                        −
+                      </button>
+                      <div className="flex-1 px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-center">
+                        <span className="text-white text-lg font-black">{guestsCount}</span>
+                        <span className="text-white/40 text-sm ml-2">personne{guestsCount > 1 ? 's' : ''}</span>
+                      </div>
+                      <button
+                        onClick={() => setGuestsCount(Math.min(20, guestsCount + 1))}
+                        className="w-12 h-12 bg-white/5 border border-white/10 rounded-xl text-white font-bold text-xl hover:bg-white/10 transition-all active:scale-95"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Date de naissance */}
-                  <div>
-                    <label className="block text-xs font-black text-gray-700 uppercase mb-2">🎂 Date de naissance (voyageur principal)</label>
+                  {/* Birthdate */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-bold text-white/60">
+                      <span>🎂</span> Date de naissance (voyageur principal)
+                    </label>
                     <input
                       type="date"
                       value={birthdate}
                       max={todayStr}
                       onChange={e => setBirthdate(e.target.value)}
-                      className="w-full border-2 border-gray-200 rounded-xl px-3 py-3 text-sm font-bold text-gray-900 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all"
+                      className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
                     />
-                    <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-                      Pour la sécurité, l'hôte pourra demander une pièce d'identité à votre arrivée
+                    <p className="text-[10px] text-white/30">Pour la vérification d'identité à l'arrivée</p>
+                  </div>
+
+                  {/* Price summary */}
+                  {nights > 0 && (
+                    <div className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-pink-600/20 border border-white/10">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl" />
+                      
+                      <div className="relative space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/60">{nights} nuit{nights > 1 ? 's' : ''} × {formatCurrency(property.price)}</span>
+                          <span className="text-white font-bold">{formatCurrency(nights * property.price)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-white/60">Frais de service</span>
+                          <span className="text-white font-bold">{formatCurrency(pricing.serviceFeeClient)}</span>
+                        </div>
+                        
+                        <div className="h-px bg-white/10 my-2" />
+                        
+                        <div className="flex justify-between items-end">
+                          <span className="text-white font-bold">Total</span>
+                          <div className="text-right">
+                            <p className="text-2xl font-black text-white">{formatCurrency(pricing.totalClient)}</p>
+                            <p className="text-[10px] text-white/40">≈ {formatCurrencyEURFromDZD(pricing.totalClient)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => setStep('CONFIRMATION')}
+                    disabled={nights <= 0 || !guestsCount || !birthdate}
+                    className="group relative w-full py-5 overflow-hidden rounded-2xl font-black uppercase tracking-wider transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.98]"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600" />
+                    <span className="relative text-white flex items-center justify-center gap-2 text-sm">
+                      Continuer
+                      <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {/* ========== CONFIRMATION ========== */}
+              {step === 'CONFIRMATION' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <button
+                    onClick={() => setStep('DATES')}
+                    className="flex items-center gap-2 text-white/50 hover:text-white font-bold text-sm transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <span>Retour</span>
+                  </button>
+
+                  <div>
+                    <h3 className="text-2xl font-black text-white mb-1">Paiement</h3>
+                    <p className="text-sm text-white/40">Comment souhaitez-vous payer ?</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {[
+                      { id: 'BARIDIMOB', icon: '📱', name: 'BaridiMob / CCP', desc: 'Virement Algérie Poste' },
+                      { id: 'RIB', icon: '🏦', name: 'Virement bancaire', desc: 'RIB banques algériennes' },
+                      { id: 'PAYPAL', icon: '💳', name: 'PayPal', desc: 'Paiement international' },
+                    ].map(method => (
+                      <button
+                        key={method.id}
+                        onClick={() => setPaymentMethod(method.id as PaymentMethod)}
+                        className={`group w-full p-4 rounded-2xl border-2 transition-all flex items-center gap-4 text-left ${
+                          paymentMethod === method.id
+                            ? 'border-indigo-500 bg-indigo-500/10'
+                            : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all ${
+                          paymentMethod === method.id
+                            ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg'
+                            : 'bg-white/10'
+                        }`}>
+                          {method.icon}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-bold text-sm">{method.name}</p>
+                          <p className="text-white/40 text-xs">{method.desc}</p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 transition-all flex items-center justify-center ${
+                          paymentMethod === method.id
+                            ? 'border-indigo-500 bg-indigo-500'
+                            : 'border-white/30'
+                        }`}>
+                          {paymentMethod === method.id && (
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-xs text-amber-200/80 leading-relaxed">
+                      <span className="font-black">⚠️ Important :</span> Ne payez rien avant l'acceptation de l'hôte. 
+                      Vous recevrez un lien de paiement après confirmation.
                     </p>
                   </div>
+
+                  <button
+                    onClick={handleBooking}
+                    disabled={isBlocking}
+                    className="group relative w-full py-5 overflow-hidden rounded-2xl font-black uppercase tracking-wider transition-all disabled:opacity-50 active:scale-[0.98]"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+                    <span className="relative text-white flex items-center justify-center gap-2 text-sm">
+                      {isBlocking ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Envoi en cours...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>✨</span>
+                          <span>Envoyer ma demande</span>
+                        </>
+                      )}
+                    </span>
+                  </button>
                 </div>
+              )}
 
-                {/* Récap prix */}
-                {nights > 0 && (
-                  <div className="bg-gradient-to-br from-indigo-950 to-purple-950 rounded-3xl p-6 text-white space-y-4 shadow-2xl border border-white/10">
-                    <p className="text-xs font-black uppercase tracking-wider text-indigo-200">Détail du prix</p>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-white/70">{nights} nuit{nights > 1 ? 's' : ''} × {formatCurrency(property.price)}</span>
-                        <span className="font-bold">{formatCurrency(nights * property.price)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-white/70">Frais de service (5%)</span>
-                        <span className="font-bold">{formatCurrency(pricing.serviceFeeClient)}</span>
-                      </div>
-                    </div>
+              {/* ========== PROCESSING ========== */}
+              {step === 'PROCESSING' && (
+                <div className="flex flex-col items-center justify-center py-20 animate-in zoom-in-95">
+                  <div className="relative w-20 h-20 mb-8">
+                    <div className="absolute inset-0 border-4 border-indigo-500/20 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-transparent border-t-indigo-500 rounded-full animate-spin" />
+                    <div className="absolute inset-2 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+                  </div>
+                  <h3 className="text-xl font-black text-white mb-2">Vérification...</h3>
+                  <p className="text-sm text-white/40">Nous vérifions la disponibilité</p>
+                </div>
+              )}
 
-                    <div className="h-px bg-white/10 my-3" />
-
-                    <div className="flex justify-between items-end">
-                      <span className="text-lg font-black">Total</span>
-                      <div className="text-right">
-                        <p className="text-3xl font-black text-indigo-200">{formatCurrency(pricing.totalClient)}</p>
-                        <p className="text-xs text-white/60 mt-0.5">≈ {formatCurrencyEURFromDZD(pricing.totalClient)}</p>
-                      </div>
+              {/* ========== SUCCESS ========== */}
+              {step === 'SUCCESS' && (
+                <div className="flex flex-col items-center justify-center py-12 animate-in zoom-in-95 duration-700">
+                  <div className="relative mb-8">
+                    <div className="absolute inset-0 bg-emerald-500/30 rounded-full blur-2xl animate-pulse" />
+                    <div className="relative w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center shadow-2xl">
+                      <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                      </svg>
                     </div>
                   </div>
-                )}
-
-                <button
-                  onClick={() => setStep('CONFIRMATION')}
-                  disabled={nights <= 0 || !guestsCount || !birthdate}
-                  className="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase tracking-wider shadow-xl hover:shadow-2xl transition-all active:scale-[0.98]"
-                >
-                  Continuer
-                </button>
-              </div>
-            )}
-
-            {/* ========== CONFIRMATION ========== */}
-            {step === 'CONFIRMATION' && (
-              <div className="animate-in slide-in-from-right duration-500 space-y-6">
-                <button
-                  onClick={() => setStep('DATES')}
-                  className="flex items-center gap-2 text-indigo-600 font-bold text-sm hover:text-indigo-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  <span>Retour</span>
-                </button>
-
-                <div>
-                  <h3 className="text-2xl font-black text-gray-900 mb-1">Mode de paiement</h3>
-                  <p className="text-sm text-gray-500">Choisissez comment vous souhaitez payer</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3">
-                  {/* BARIDIMOB */}
-                  <button
-                    onClick={() => setPaymentMethod('BARIDIMOB')}
-                    className={`p-5 rounded-2xl border-2 transition-all flex items-center gap-4 text-left group ${
-                      paymentMethod === 'BARIDIMOB'
-                        ? 'border-indigo-600 bg-indigo-50 shadow-lg ring-2 ring-indigo-200'
-                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50'
-                    }`}
-                  >
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all ${
-                      paymentMethod === 'BARIDIMOB'
-                        ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-500'
-                    }`}>
-                      📱
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black uppercase text-gray-900">BaridiMob / CCP</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Virement Algérie Poste</p>
-                    </div>
-                    {paymentMethod === 'BARIDIMOB' && (
-                      <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-
-                  {/* RIB */}
-                  <button
-                    onClick={() => setPaymentMethod('RIB')}
-                    className={`p-5 rounded-2xl border-2 transition-all flex items-center gap-4 text-left group ${
-                      paymentMethod === 'RIB'
-                        ? 'border-indigo-600 bg-indigo-50 shadow-lg ring-2 ring-indigo-200'
-                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50'
-                    }`}
-                  >
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all ${
-                      paymentMethod === 'RIB'
-                        ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-500'
-                    }`}>
-                      🏦
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black uppercase text-gray-900">Virement bancaire (RIB)</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Banques algériennes</p>
-                    </div>
-                    {paymentMethod === 'RIB' && (
-                      <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-
-                  {/* PAYPAL */}
-                  <button
-                    onClick={() => setPaymentMethod('PAYPAL')}
-                    className={`p-5 rounded-2xl border-2 transition-all flex items-center gap-4 text-left group ${
-                      paymentMethod === 'PAYPAL'
-                        ? 'border-indigo-600 bg-indigo-50 shadow-lg ring-2 ring-indigo-200'
-                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50'
-                    }`}
-                  >
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl transition-all ${
-                      paymentMethod === 'PAYPAL'
-                        ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg'
-                        : 'bg-gray-100 text-gray-400 group-hover:bg-indigo-100 group-hover:text-indigo-500'
-                    }`}>
-                      💳
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black uppercase text-gray-900">PayPal</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Paiement en ligne sécurisé</p>
-                    </div>
-                    {paymentMethod === 'PAYPAL' && (
-                      <div className="w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                  <p className="text-xs text-amber-900 leading-relaxed">
-                    <span className="font-black">⚠️ Important :</span> Ne payez rien avant que l'hôte accepte votre demande. 
-                    Une fois acceptée, vous recevrez un lien pour envoyer votre preuve de paiement.
+                  
+                  <h2 className="text-3xl font-black text-white mb-3 text-center">Demande envoyée !</h2>
+                  
+                  <p className="text-sm text-white/50 text-center leading-relaxed mb-8 max-w-xs">
+                    L'hôte a <span className="text-indigo-400 font-bold">24h</span> pour répondre. 
+                    Vous serez notifié dès qu'il acceptera.
                   </p>
+
+                  <div className="w-full p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 mb-6">
+                    <p className="text-xs text-indigo-200/80 text-center leading-relaxed">
+                      💡 Ne payez rien maintenant. Si accepté, vous recevrez un lien de paiement dans <span className="font-bold">"Mes Voyages"</span>.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleSafeClose}
+                    className="w-full py-5 bg-white/10 hover:bg-white/20 border border-white/10 text-white rounded-2xl font-black uppercase tracking-wider transition-all active:scale-[0.98]"
+                  >
+                    Fermer
+                  </button>
                 </div>
+              )}
 
-                <button
-                  onClick={handleBooking}
-                  disabled={isBlocking}
-                  className="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 disabled:from-gray-300 disabled:to-gray-400 text-white rounded-2xl font-black uppercase tracking-wider shadow-xl hover:shadow-2xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  {isBlocking ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Envoi en cours...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>✨</span>
-                      <span>Demander à réserver</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+              {/* ========== MAP ========== */}
+              {step === 'MAP' && <PropertyMap property={property} />}
 
-            {/* ========== PROCESSING ========== */}
-            {step === 'PROCESSING' && (
-              <div className="h-full flex flex-col items-center justify-center text-center py-20 animate-in zoom-in-95">
-                <div className="w-24 h-24 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-8" />
-                <h3 className="text-2xl font-black text-gray-900 mb-2">Vérification en cours...</h3>
-                <p className="text-sm text-gray-500">Nous vérifions la disponibilité</p>
-              </div>
-            )}
-
-            {/* ========== SUCCESS ========== */}
-            {step === 'SUCCESS' && (
-              <div className="h-full flex flex-col items-center justify-center text-center py-16 animate-in zoom-in-95 duration-700">
-                <div className="w-28 h-28 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-2xl mb-8 animate-bounce-slow">
-                  <svg className="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
-                  </svg>
+              {/* ========== REVIEWS ========== */}
+              {step === 'REVIEWS' && (
+                <div className="animate-in fade-in duration-500">
+                  <ReviewSection propertyId={property.id} currentUser={currentUser} />
                 </div>
-                
-                <h2 className="text-4xl font-black text-gray-900 mb-3">Demande envoyée !</h2>
-                
-                <p className="text-sm text-gray-600 leading-relaxed mb-8 max-w-md px-4">
-                  L'hôte a été notifié et dispose de <span className="font-black text-indigo-600">24 heures</span> pour répondre. 
-                  Vous recevrez une notification dès qu'il acceptera ou refusera.
-                </p>
+              )}
 
-                <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-8 max-w-md">
-                  <p className="text-xs text-indigo-900 leading-relaxed">
-                    <span className="font-black">💡 Rappel :</span> Ne payez rien maintenant ! Si l'hôte accepte, 
-                    vous pourrez envoyer votre preuve de paiement depuis <span className="font-black">"Mes Voyages"</span>.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleSafeClose}
-                  className="w-full max-w-sm py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-2xl font-black uppercase tracking-wider shadow-xl hover:shadow-2xl transition-all active:scale-[0.98]"
-                >
-                  Terminer
-                </button>
-              </div>
-            )}
-
-            {/* ========== MAP ========== */}
-            {step === 'MAP' && <PropertyMap property={property} />}
-
-            {/* ========== REVIEWS ========== */}
-            {step === 'REVIEWS' && (
-              <ReviewSection propertyId={property.id} currentUser={currentUser} />
-            )}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Keyframes pour les animations */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.8; }
+        }
+      `}</style>
     </div>
   );
 };
