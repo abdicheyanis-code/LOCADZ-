@@ -29,6 +29,8 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     admin: 'Admin',
     logout: 'Déconnexion',
     switchRole: 'Changer de mode',
+    profile: 'Mon Profil', // ✅ AJOUTÉ
+    profileDesc: 'Gérer mon compte', // ✅ AJOUTÉ
   },
   en: {
     traveler: 'Traveler',
@@ -41,6 +43,8 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     admin: 'Admin',
     logout: 'Log out',
     switchRole: 'Switch mode',
+    profile: 'My Profile', // ✅ AJOUTÉ
+    profileDesc: 'Manage my account', // ✅ AJOUTÉ
   },
   ar: {
     traveler: 'مسافر',
@@ -53,6 +57,8 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     admin: 'الإدارة',
     logout: 'خروج',
     switchRole: 'تغيير الوضع',
+    profile: 'ملفي الشخصي', // ✅ AJOUTÉ
+    profileDesc: 'إدارة حسابي', // ✅ AJOUTÉ
   },
 };
 
@@ -149,6 +155,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleSwitchRole = () => {
     onSwitchRole();
+    setIsMenuOpen(false);
+  };
+
+  // ✅ NOUVELLE FONCTION : Naviguer vers le profil/dashboard
+  const handleGoToProfile = () => {
+    if (userRole === 'TRAVELER') {
+      onNavigate('PROFILE');
+    } else {
+      onNavigate('HOST_DASH');
+    }
     setIsMenuOpen(false);
   };
 
@@ -338,7 +354,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </svg>
             </button>
 
-            {/* ✅ MENU DÉROULANT SIMPLIFIÉ */}
+            {/* ✅ MENU DÉROULANT MODIFIÉ */}
             {isMenuOpen && currentUser && (
               <div
                 className={`
@@ -384,6 +400,45 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div className="p-4 space-y-4">
+                  {/* ✅ NOUVEAU : BOUTON PROFIL */}
+                  <button
+                    onClick={handleGoToProfile}
+                    className={`w-full p-4 rounded-2xl font-bold text-sm flex items-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                      userRole === 'TRAVELER'
+                        ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 border border-purple-200'
+                        : 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-200'
+                    }`}
+                  >
+                    <div 
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-lg ${
+                        userRole === 'TRAVELER'
+                          ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                          : 'bg-gradient-to-br from-amber-400 to-orange-500'
+                      }`}
+                    >
+                      {userRole === 'TRAVELER' ? '👤' : '📊'}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className={`font-black ${
+                        userRole === 'TRAVELER' ? 'text-purple-900' : 'text-amber-900'
+                      }`}>
+                        {t.profile}
+                      </p>
+                      <p className={`text-xs ${
+                        userRole === 'TRAVELER' ? 'text-purple-600/70' : 'text-amber-600/70'
+                      }`}>
+                        {t.profileDesc}
+                      </p>
+                    </div>
+                    <div className={`${
+                      userRole === 'TRAVELER' ? 'text-purple-400' : 'text-amber-400'
+                    }`}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+
                   {/* ✅ SWITCH VOYAGEUR/HÔTE MAGNIFIQUE */}
                   <div className="bg-gray-100 rounded-2xl p-1.5">
                     <div className="relative flex">
