@@ -18,6 +18,7 @@ import { AddPropertyModal } from './AddPropertyModal';
 import { EditPropertyModal } from './EditPropertyModal';
 import { IdVerificationModal } from './IdVerificationModal';
 import { CancellationModal } from './CancellationModal';
+import { AvailabilityCalendar } from './AvailabilityCalendar';
 import { fetchMyNotifications } from '../services/notifications';
 
 interface HostDashboardProps {
@@ -116,8 +117,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
   const [isVerifModalOpen, setIsVerifModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
-  // ✅ NOUVEAU : Modal d'annulation
+  // Modal d'annulation
   const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
+
+  // ✅ NOUVEAU : Modal calendrier de disponibilité
+  const [calendarProperty, setCalendarProperty] = useState<Property | null>(null);
 
   const [myProperties, setMyProperties] = useState<Property[]>([]);
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
@@ -202,7 +206,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
     }
   };
 
-  // ✅ Callback après annulation
+  // Callback après annulation
   const handleCancellationSuccess = async () => {
     await loadDashboardData();
     onRefresh();
@@ -280,7 +284,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
 
   const recentNotifications = notifications.slice(0, 5);
 
-  // ✅ Séparer les réservations
+  // Séparer les réservations
   const upcomingBookings = allBookings.filter(
     (b) => new Date(b.start_date) > new Date() && ['APPROVED', 'PAID'].includes(b.status)
   );
@@ -522,6 +526,14 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-4 right-4 flex gap-2">
+                        {/* ✅ NOUVEAU : Bouton Calendrier */}
+                        <button
+                          onClick={() => setCalendarProperty(prop)}
+                          className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-indigo-600 hover:bg-white transition-all text-lg"
+                          title="Calendrier de disponibilité"
+                        >
+                          📅
+                        </button>
                         <button
                           onClick={() => setEditingProperty(prop)}
                           className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center text-indigo-600 hover:bg-white transition-all"
@@ -666,7 +678,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                                 : Number(booking.total_price) - Number(booking.commission_fee || 0)
                             )}
                           </p>
-                          {/* ✅ Bouton Annuler */}
+                          {/* Bouton Annuler */}
                           <button
                             onClick={() => setCancellingBooking(booking)}
                             className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 rounded-xl text-xs font-bold transition-all active:scale-95"
@@ -715,7 +727,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
                 </div>
               )}
 
-              {/* ✅ Annulées */}
+              {/* Annulées */}
               {cancelledBookings.length > 0 && (
                 <div>
                   <h2 className="text-2xl font-black text-white mb-4">
@@ -1023,7 +1035,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
         }}
       />
 
-      {/* ✅ NOUVEAU : Modal d'annulation */}
+      {/* Modal d'annulation */}
       {cancellingBooking && (
         <CancellationModal
           isOpen={!!cancellingBooking}
@@ -1032,6 +1044,15 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({
           userRole="HOST"
           userId={hostId}
           onSuccess={handleCancellationSuccess}
+        />
+      )}
+
+      {/* ✅ NOUVEAU : Modal Calendrier de disponibilité */}
+      {calendarProperty && (
+        <AvailabilityCalendar
+          property={calendarProperty}
+          isOpen={!!calendarProperty}
+          onClose={() => setCalendarProperty(null)}
         />
       )}
     </div>
