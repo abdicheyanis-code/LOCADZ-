@@ -15,7 +15,7 @@ const WHY_LOCADZ: Record<AppLanguage, { title: string; points: { icon: string; t
   fr: {
     title: "Pourquoi LocaDZ ?",
     points: [
-      { icon: "🏠", title: "Villas vérifiées", desc: "Chaque propriété est inspectée et validée" },
+     
       { icon: "🔒", title: "Paiement sécurisé", desc: "Réservez en toute confiance" },
       { icon: "🇩🇿", title: "100% Algérien", desc: "Du Sahara à la Méditerranée" }
     ]
@@ -23,7 +23,7 @@ const WHY_LOCADZ: Record<AppLanguage, { title: string; points: { icon: string; t
   en: {
     title: "Why LocaDZ?",
     points: [
-      { icon: "🏠", title: "Verified villas", desc: "Each property is inspected and validated" },
+    
       { icon: "🔒", title: "Secure payment", desc: "Book with confidence" },
       { icon: "🇩🇿", title: "100% Algerian", desc: "From Sahara to Mediterranean" }
     ]
@@ -31,7 +31,7 @@ const WHY_LOCADZ: Record<AppLanguage, { title: string; points: { icon: string; t
   ar: {
     title: "لماذا LocaDZ؟",
     points: [
-      { icon: "🏠", title: "فيلات موثوقة", desc: "كل عقار يتم فحصه والتحقق منه" },
+   
       { icon: "🔒", title: "دفع آمن", desc: "احجز بكل ثقة" },
       { icon: "🇩🇿", title: "100% جزائري", desc: "من الصحراء إلى البحر المتوسط" }
     ]
