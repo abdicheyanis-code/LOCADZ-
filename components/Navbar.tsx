@@ -1,5 +1,8 @@
+// components/Navbar.tsx
+
 import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, UserProfile, AppLanguage } from '../types';
+import { NotificationBell } from './NotificationBell'; // ✅ NOUVEAU : Import du composant cloche
 
 interface NavbarProps {
   selectedCategory?: string;
@@ -15,6 +18,8 @@ interface NavbarProps {
   onLanguageChange: (lang: AppLanguage) => void;
   accentColor?: string;
   dbStatus?: 'CONNECTING' | 'CONNECTED' | 'ERROR';
+  unreadCount?: number; // ✅ NOUVEAU : Nombre de notifications non lues
+  onMarkAllNotificationsRead?: () => void; // ✅ NOUVEAU : Callback pour marquer tout comme lu
 }
 
 const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
@@ -29,8 +34,8 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     admin: 'Admin',
     logout: 'Déconnexion',
     switchRole: 'Changer de mode',
-    profile: 'Mon Profil', // ✅ AJOUTÉ
-    profileDesc: 'Gérer mon compte', // ✅ AJOUTÉ
+    profile: 'Mon Profil',
+    profileDesc: 'Gérer mon compte',
   },
   en: {
     traveler: 'Traveler',
@@ -43,8 +48,8 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     admin: 'Admin',
     logout: 'Log out',
     switchRole: 'Switch mode',
-    profile: 'My Profile', // ✅ AJOUTÉ
-    profileDesc: 'Manage my account', // ✅ AJOUTÉ
+    profile: 'My Profile',
+    profileDesc: 'Manage my account',
   },
   ar: {
     traveler: 'مسافر',
@@ -57,8 +62,8 @@ const NAVBAR_TRANSLATIONS: Record<AppLanguage, any> = {
     admin: 'الإدارة',
     logout: 'خروج',
     switchRole: 'تغيير الوضع',
-    profile: 'ملفي الشخصي', // ✅ AJOUTÉ
-    profileDesc: 'إدارة حسابي', // ✅ AJOUTÉ
+    profile: 'ملفي الشخصي',
+    profileDesc: 'إدارة حسابي',
   },
 };
 
@@ -124,6 +129,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLanguageChange,
   accentColor = '#6366f1',
   dbStatus = 'CONNECTING',
+  unreadCount = 0, // ✅ NOUVEAU
+  onMarkAllNotificationsRead, // ✅ NOUVEAU
 }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -158,7 +165,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsMenuOpen(false);
   };
 
-  // ✅ NOUVELLE FONCTION : Naviguer vers le profil/dashboard
   const handleGoToProfile = () => {
     if (userRole === 'TRAVELER') {
       onNavigate('PROFILE');
@@ -287,6 +293,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
+          {/* ✅ NOUVEAU : CLOCHE NOTIFICATIONS */}
+          {currentUser && onMarkAllNotificationsRead && (
+            <NotificationBell
+              userId={currentUser.id}
+              unreadCount={unreadCount}
+              onMarkAllRead={onMarkAllNotificationsRead}
+              isScrolled={isScrolled}
+            />
+          )}
+
           {/* Menu profil */}
           <div className="relative" ref={menuRef}>
             <button
@@ -341,7 +357,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </div>
 
-              {/* Indicateur menu ouvert */}
               <svg
                 className={`w-3 h-3 transition-transform duration-300 hidden md:block ${
                   isScrolled ? 'text-white/60' : 'text-gray-400'
@@ -354,7 +369,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </svg>
             </button>
 
-            {/* ✅ MENU DÉROULANT MODIFIÉ */}
+            {/* Menu déroulant */}
             {isMenuOpen && currentUser && (
               <div
                 className={`
@@ -400,7 +415,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div className="p-4 space-y-4">
-                  {/* ✅ NOUVEAU : BOUTON PROFIL */}
+                  {/* Bouton Profil */}
                   <button
                     onClick={handleGoToProfile}
                     className={`w-full p-4 rounded-2xl font-bold text-sm flex items-center gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] ${
@@ -439,10 +454,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </button>
 
-                  {/* ✅ SWITCH VOYAGEUR/HÔTE MAGNIFIQUE */}
+                  {/* Switch Voyageur/Hôte */}
                   <div className="bg-gray-100 rounded-2xl p-1.5">
                     <div className="relative flex">
-                      {/* Indicateur glissant */}
                       <div
                         className={`absolute top-0 bottom-0 w-1/2 rounded-xl transition-all duration-500 ease-out shadow-lg ${
                           userRole === 'TRAVELER'
@@ -451,7 +465,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                         }`}
                       />
 
-                      {/* Bouton Voyageur */}
                       <button
                         onClick={userRole !== 'TRAVELER' ? handleSwitchRole : undefined}
                         className={`relative flex-1 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -464,7 +477,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span>{t.traveler}</span>
                       </button>
 
-                      {/* Bouton Hôte */}
                       <button
                         onClick={userRole !== 'HOST' ? handleSwitchRole : undefined}
                         className={`relative flex-1 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -479,7 +491,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </div>
 
-                  {/* ✅ ADMIN (si admin seulement) */}
+                  {/* Admin */}
                   {currentUser.role === 'ADMIN' && (
                     <button
                       onClick={() => {
@@ -493,10 +505,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   )}
 
-                  {/* Séparateur */}
                   <div className="h-px bg-gray-200" />
 
-                  {/* ✅ SÉLECTEUR DE LANGUE */}
+                  {/* Sélecteur de langue */}
                   <div className="flex gap-2">
                     <button
                       onClick={() => onLanguageChange('fr')}
@@ -533,7 +544,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </button>
                   </div>
 
-                  {/* ✅ DÉCONNEXION */}
+                  {/* Déconnexion */}
                   <button
                     onClick={() => {
                       onLogout();
