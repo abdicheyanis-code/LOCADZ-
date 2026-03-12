@@ -4,11 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { notificationService } from '../services/notificationService';
 import { Notification } from '../types';
 
-// ✅ Installation nécessaire : npm install date-fns
-// (Pour afficher "Il y a 2 min" au lieu de la date complète)
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
-
 interface NotificationBellProps {
   userId: string;                    // L'ID de l'utilisateur connecté
   unreadCount: number;               // Nombre de notifs non lues (vient de App.tsx)
@@ -50,12 +45,20 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ✅ FONCTION : Formate la date en français (ex: "Il y a 2 min")
+  // ✅ FONCTION : Formate la date en français (SANS date-fns)
   const formatDate = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), {
-      addSuffix: true,
-      locale: fr
-    });
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "À l'instant";
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    if (diffHours < 24) return `Il y a ${diffHours}h`;
+    if (diffDays < 7) return `Il y a ${diffDays}j`;
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
   // ✅ FONCTION : Marque une notification comme lue
