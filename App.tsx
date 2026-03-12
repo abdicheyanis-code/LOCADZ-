@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
@@ -15,13 +16,14 @@ import { AboutUs } from './components/AboutUs';
 import { ProfileSettings } from './components/ProfileSettings';
 import { LegalPages } from './components/LegalPages';
 import { ResetPassword } from './components/ResetPassword';
-import { PaymentPage } from './components/PaymentPage'; // ✅ AJOUTÉ
+import { PaymentPage } from './components/PaymentPage';
 import { CATEGORIES, CATEGORY_COLORS } from './constants';
 import { Property, UserRole, UserProfile, AppLanguage } from './types';
 import { authService } from './services/authService';
 import { propertyService } from './services/propertyService';
 import { favoriteService } from './services/favoriteService';
 import { parseSmartSearch } from './services/geminiService';
+import { notificationService } from './services/notificationService'; // ✅ AJOUTÉ
 import { TRANSLATIONS } from './services/i18n';
 
 type ActiveView =
@@ -42,6 +44,7 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<AppLanguage>('fr');
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
   const [dbStatus, setDbStatus] = useState<'CONNECTING' | 'CONNECTED' | 'ERROR'>('CONNECTING');
+  const [unreadCount, setUnreadCount] = useState(0); // ✅ AJOUTÉ
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -134,12 +137,35 @@ const App: React.FC = () => {
     initApp();
   }, []);
 
+  // ✅ NOUVEAU : Récupère le compteur de notifications non lues
+  useEffect(() => {
+    if (currentUser) {
+      notificationService.getUnreadCount(currentUser.id)
+        .then(setUnreadCount);
+    } else {
+      setUnreadCount(0);
+    }
+  }, [currentUser]);
+
+  // ✅ NOUVEAU : Écoute les nouvelles notifications en TEMPS RÉEL
+  useEffect(() => {
+    if (currentUser) {
+      const unsubscribe = notificationService.subscribeToNewNotifications(
+        currentUser.id,
+        () => {
+          notificationService.getUnreadCount(currentUser.id)
+            .then(setUnreadCount);
+        }
+      );
+      return unsubscribe;
+    }
+  }, [currentUser]);
+
   const getAmbientColor = (catId: string): string => {
     return CATEGORY_COLORS[catId]?.primary || '#6366f1';
   };
 
   useEffect(() => {
-    // Ignorer les routes spéciales
     if (location.pathname === '/reset-password' || location.pathname.startsWith('/payment/')) {
       return;
     }
@@ -236,9 +262,17 @@ const App: React.FC = () => {
     userRole === 'HOST' && 
     activeView === 'PROFILE';
 
+  // ✅ NOUVEAU : Fonction pour marquer toutes les notifications comme lues
+  const handleMarkAllNotificationsRead = async () => {
+    if (currentUser) {
+      await notificationService.markAllAsRead(currentUser.id);
+      setUnreadCount(0);
+    }
+  };
+
   if (!hasCheckedSession) return null;
 
-  // ✅ Reset password page
+  // Reset password page
   if (location.pathname === '/reset-password') {
     return (
       <div className="min-h-screen bg-[#050505] text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -248,7 +282,7 @@ const App: React.FC = () => {
     );
   }
 
-  // ✅ AJOUTÉ : Payment page
+  // Payment page
   if (location.pathname.startsWith('/payment/')) {
     return (
       <div className="min-h-screen bg-[#050505] text-white" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -280,6 +314,8 @@ const App: React.FC = () => {
             onNavigate={v => handleNavigate(v as ActiveView, true)}
             accentColor={ambientColor}
             dbStatus={dbStatus}
+            unreadCount={0} // ✅ AJOUTÉ
+            onMarkAllNotificationsRead={() => {}} // ✅ AJOUTÉ
           />
           <main className="pt-32 pb-40 px-6 md:px-20 max-w-7xl mx-auto">
             <AboutUs language={language} translations={t} />
@@ -343,6 +379,8 @@ const App: React.FC = () => {
               onNavigate={v => handleNavigate(v as ActiveView, true)}
               accentColor={ambientColor}
               dbStatus={dbStatus}
+              unreadCount={unreadCount} // ✅ AJOUTÉ
+              onMarkAllNotificationsRead={handleMarkAllNotificationsRead} // ✅ AJOUTÉ
             />
 
             <main className="flex-1 pt-28 md:pt-32 pb-20 md:pb-40">
