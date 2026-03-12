@@ -1,29 +1,26 @@
 // services/notificationService.ts
-
-import { supabase } from './supabaseClient';
+import { supabase } from '../supabaseClient'; // ✅ CORRIGÉ
 import { Notification, NotificationType } from '../types';
 
-// ✅ Type pour créer une nouvelle notification
 type NewNotificationData = {
-  recipientId: string;        // L'utilisateur qui reçoit la notif
-  actorId?: string | null;    // Celui qui a déclenché l'action (peut être null)
-  type: NotificationType;     // 'booking_created', 'booking_accepted', etc.
-  title: string;              // Ex: "Nouvelle réservation !"
-  body?: string | null;       // Description détaillée
-  data?: Record<string, any>; // Données supplémentaires (booking_id, property_id, etc.)
+  recipientId: string;
+  actorId?: string | null;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  data?: Record<string, any>;
 };
 
 export const notificationService = {
   /**
-   * 🔢 Récupère le NOMBRE de notifications NON LUES
-   * Utilisé pour afficher le badge rouge (ex: "3")
+   * Récupère le nombre de notifications non lues
    */
   async getUnreadCount(userId: string): Promise<number> {
     const { count, error } = await supabase
       .from('notifications')
-      .select('*', { count: 'exact', head: true }) // Compte sans récupérer les données
-      .eq('recipient_id', userId)                  // Filtre par destinataire
-      .is('read_at', null);                        // Seulement les non lues
+      .select('*', { count: 'exact', head: true })
+      .eq('recipient_id', userId)
+      .is('read_at', null);
 
     if (error) {
       console.error('❌ Erreur compteur notifications:', error);
@@ -34,15 +31,14 @@ export const notificationService = {
   },
 
   /**
-   * 📋 Récupère la LISTE des notifications d'un utilisateur
-   * Utilisé pour afficher le dropdown de la cloche
+   * Récupère les notifications d'un utilisateur
    */
   async getUserNotifications(userId: string, limit = 50): Promise<Notification[]> {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('recipient_id', userId)
-      .order('created_at', { ascending: false }) // Les plus récentes d'abord
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
@@ -54,8 +50,7 @@ export const notificationService = {
   },
 
   /**
-   * ✅ Marque UNE notification comme lue
-   * Appelé quand l'utilisateur clique sur une notification
+   * Marque une notification comme lue
    */
   async markAsRead(notificationId: string): Promise<void> {
     const { error } = await supabase
@@ -67,32 +62,21 @@ export const notificationService = {
   },
 
   /**
-   * ✅ Marque TOUTES les notifications comme lues
-   * Appelé quand l'utilisateur clique sur "Tout marquer comme lu"
+   * Marque TOUTES les notifications comme lues
    */
   async markAllAsRead(userId: string): Promise<void> {
     const { error } = await supabase
       .from('notifications')
       .update({ read_at: new Date().toISOString() })
       .eq('recipient_id', userId)
-      .is('read_at', null); // Seulement celles qui sont non lues
+      .is('read_at', null);
 
     if (error) console.error('❌ Erreur marquage tout:', error);
   },
 
   /**
-   * ➕ Crée une nouvelle notification
-   * Tu l'utiliseras dans tes services (bookingService, etc.)
-   * 
-   * Exemple d'utilisation :
-   * await notificationService.createNotification({
-   *   recipientId: hostId,
-   *   actorId: travelerId,
-   *   type: 'booking_created',
-   *   title: 'Nouvelle réservation !',
-   *   body: 'Quelqu\'un veut réserver votre villa',
-   *   data: { booking_id: '123', property_id: '456' }
-   * });
+   * Crée une nouvelle notification
+   * (À utiliser dans tes services de bookings, messages, etc.)
    */
   async createNotification({
     recipientId,
@@ -115,10 +99,8 @@ export const notificationService = {
   },
 
   /**
-   * 🔴 TEMPS RÉEL : Écoute les NOUVELLES notifications
-   * Utilisé dans App.tsx pour mettre à jour le badge instantanément
-   * 
-   * Retourne une fonction de désabonnement (à appeler au démontage du composant)
+   * Écoute les nouvelles notifications en TEMPS RÉEL
+   * (Supabase Realtime)
    */
   subscribeToNewNotifications(userId: string, callback: () => void) {
     const channel = supabase
@@ -126,12 +108,12 @@ export const notificationService = {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',                      // Écoute les NOUVELLES notifications
+          event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `recipient_id=eq.${userId}`  // Seulement celles pour cet utilisateur
+          filter: `recipient_id=eq.${userId}`
         },
-        () => callback()                       // Appelle la fonction callback
+        () => callback()
       )
       .subscribe();
 
