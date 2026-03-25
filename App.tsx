@@ -23,7 +23,7 @@ import { authService } from './services/authService';
 import { propertyService } from './services/propertyService';
 import { favoriteService } from './services/favoriteService';
 import { parseSmartSearch } from './services/geminiService';
-import { notificationService } from './services/notificationService'; // ✅ AJOUTÉ
+import { notificationService } from './services/notificationService';
 import { TRANSLATIONS } from './services/i18n';
 
 type ActiveView =
@@ -44,7 +44,7 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<AppLanguage>('fr');
   const [hasCheckedSession, setHasCheckedSession] = useState(false);
   const [dbStatus, setDbStatus] = useState<'CONNECTING' | 'CONNECTED' | 'ERROR'>('CONNECTING');
-  const [unreadCount, setUnreadCount] = useState(0); // ✅ AJOUTÉ
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const [properties, setProperties] = useState<Property[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -84,13 +84,15 @@ const App: React.FC = () => {
     }
   };
 
+  // ✅ CORRIGÉ : Bug dbStatus
   const refreshData = async () => {
     const session = authService.getSession();
     setIsLoading(true);
     try {
       const props = await propertyService.getAll();
       setProperties(props || []);
-      setDbStatus(props && props.length > 0 ? 'CONNECTED' : 'ERROR');
+      // ✅ Si on arrive ici la connexion a réussi : VERT
+      setDbStatus('CONNECTED');
 
       if (session) {
         const favs = await favoriteService.getUserFavoritePropertyIds(session.id);
@@ -98,6 +100,7 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error('refreshData error', e);
+      // ❌ Seulement en cas d'ERREUR RÉELLE de connexion : ROUGE
       setDbStatus('ERROR');
       setProperties([]);
     } finally {
@@ -137,7 +140,7 @@ const App: React.FC = () => {
     initApp();
   }, []);
 
-  // ✅ NOUVEAU : Récupère le compteur de notifications non lues
+  // ✅ Compteur de notifications non lues
   useEffect(() => {
     if (currentUser) {
       notificationService.getUnreadCount(currentUser.id)
@@ -147,7 +150,7 @@ const App: React.FC = () => {
     }
   }, [currentUser]);
 
-  // ✅ NOUVEAU : Écoute les nouvelles notifications en TEMPS RÉEL
+  // ✅ Écoute notifications en temps réel
   useEffect(() => {
     if (currentUser) {
       const unsubscribe = notificationService.subscribeToNewNotifications(
@@ -262,7 +265,7 @@ const App: React.FC = () => {
     userRole === 'HOST' && 
     activeView === 'PROFILE';
 
-  // ✅ NOUVEAU : Fonction pour marquer toutes les notifications comme lues
+  // ✅ Fonction marquer toutes notifications comme lu
   const handleMarkAllNotificationsRead = async () => {
     if (currentUser) {
       await notificationService.markAllAsRead(currentUser.id);
@@ -314,8 +317,8 @@ const App: React.FC = () => {
             onNavigate={v => handleNavigate(v as ActiveView, true)}
             accentColor={ambientColor}
             dbStatus={dbStatus}
-            unreadCount={0} // ✅ AJOUTÉ
-            onMarkAllNotificationsRead={() => {}} // ✅ AJOUTÉ
+            unreadCount={0}
+            onMarkAllNotificationsRead={() => {}}
           />
           <main className="pt-32 pb-40 px-6 md:px-20 max-w-7xl mx-auto">
             <AboutUs language={language} translations={t} />
@@ -379,8 +382,8 @@ const App: React.FC = () => {
               onNavigate={v => handleNavigate(v as ActiveView, true)}
               accentColor={ambientColor}
               dbStatus={dbStatus}
-              unreadCount={unreadCount} // ✅ AJOUTÉ
-              onMarkAllNotificationsRead={handleMarkAllNotificationsRead} // ✅ AJOUTÉ
+              unreadCount={unreadCount}
+              onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
             />
 
             <main className="flex-1 pt-28 md:pt-32 pb-20 md:pb-40">
