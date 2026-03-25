@@ -10,12 +10,11 @@ interface AuthLandingProps {
   translations: any;
 }
 
-// ✅ NOUVEAU : Traductions pour la section "Pourquoi LocaDZ"
 const WHY_LOCADZ: Record<AppLanguage, { title: string; points: { icon: string; title: string; desc: string }[] }> = {
   fr: {
     title: "Pourquoi LocaDZ ?",
     points: [
-     
+      { icon: "🏠", title: "Villas vérifiées", desc: "Chaque propriété est inspectée et validée" },
       { icon: "🔒", title: "Paiement sécurisé", desc: "Réservez en toute confiance" },
       { icon: "🇩🇿", title: "100% Algérien", desc: "Du Sahara à la Méditerranée" }
     ]
@@ -23,7 +22,7 @@ const WHY_LOCADZ: Record<AppLanguage, { title: string; points: { icon: string; t
   en: {
     title: "Why LocaDZ?",
     points: [
-    
+      { icon: "🏠", title: "Verified villas", desc: "Each property is inspected and validated" },
       { icon: "🔒", title: "Secure payment", desc: "Book with confidence" },
       { icon: "🇩🇿", title: "100% Algerian", desc: "From Sahara to Mediterranean" }
     ]
@@ -31,7 +30,7 @@ const WHY_LOCADZ: Record<AppLanguage, { title: string; points: { icon: string; t
   ar: {
     title: "لماذا LocaDZ؟",
     points: [
-   
+      { icon: "🏠", title: "فيلات موثوقة", desc: "كل عقار يتم فحصه والتحقق منه" },
       { icon: "🔒", title: "دفع آمن", desc: "احجز بكل ثقة" },
       { icon: "🇩🇿", title: "100% جزائري", desc: "من الصحراء إلى البحر المتوسط" }
     ]
@@ -90,7 +89,7 @@ export const AuthLanding: React.FC<AuthLandingProps> = ({
       </div>
 
       {/* ========== MAIN CONTENT ========== */}
-      <div className="w-full max-w-4xl relative">
+      <div className="w-full max-w-4xl relative mx-auto">
         
         {/* Badge */}
         <div className="flex justify-center mb-8 animate-in fade-in slide-in-from-top-4 duration-1000">
@@ -130,7 +129,7 @@ export const AuthLanding: React.FC<AuthLandingProps> = ({
         </div>
 
         {/* ========== CARD PRINCIPALE ========== */}
-        <div className="relative animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500">
+        <div className="relative animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-500 max-w-2xl mx-auto">
           {/* Card glow */}
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-indigo-500/20 rounded-[3rem] blur-xl opacity-50" />
           
@@ -161,20 +160,20 @@ export const AuthLanding: React.FC<AuthLandingProps> = ({
           </div>
         </div>
 
-        {/* ========== POURQUOI LOCADZ ========== */}
-        <div className="mt-12 md:mt-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-700">
+        {/* ========== POURQUOI LOCADZ - CORRIGÉ ========== */}
+        <div className="mt-12 md:mt-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-700 w-full max-w-2xl mx-auto">
           
           {/* Titre de section */}
-          <h3 className="text-white/50 text-xs font-black uppercase tracking-[0.3em] mb-6">
+          <h3 className="text-white/50 text-xs font-black uppercase tracking-[0.3em] mb-6 text-center">
             {whyContent.title}
           </h3>
           
-          {/* 3 Points */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 3 Points - CENTRÉ */}
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full">
             {whyContent.points.map((point, index) => (
               <div 
                 key={index}
-                className="group bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-indigo-500/20 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02]"
+                className="group bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 hover:border-indigo-500/20 rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02] w-full md:w-auto md:flex-1 text-center"
               >
                 <div className="text-2xl mb-3 group-hover:scale-110 transition-transform duration-300">
                   {point.icon}
