@@ -17,6 +17,9 @@ export interface PlatformSettings {
 }
 
 export const platformService = {
+  /**
+   * Récupère les coordonnées de paiement de la plateforme
+   */
   async getPlatformSettings(): Promise<PlatformSettings | null> {
     const { data, error } = await supabase
       .from('platform_settings')
@@ -26,9 +29,25 @@ export const platformService = {
       .maybeSingle();
 
     if (error) {
-      console.error('getPlatformSettings error:', error);
+      console.error('❌ getPlatformSettings error:', error);
       return null;
     }
     return (data as PlatformSettings) || null;
+  },
+
+  /**
+   * Calcule le montant que recevra le host après commission
+   */
+  calculateHostPayout(totalPrice: number, commissionPercentage: number): {
+    hostPayout: number;
+    platformCommission: number;
+  } {
+    const platformCommission = (totalPrice * commissionPercentage) / 100;
+    const hostPayout = totalPrice - platformCommission;
+
+    return {
+      hostPayout: Math.round(hostPayout * 100) / 100,
+      platformCommission: Math.round(platformCommission * 100) / 100
+    };
   }
 };
