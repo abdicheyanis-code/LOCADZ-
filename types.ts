@@ -8,8 +8,7 @@ export type BookingStatus =
   | 'CANCELLED'
   | 'REJECTED';
 
-export type PaymentMethod = 'ON_ARRIVAL' | 'BARIDIMOB' | 'RIB' | 'PAYPAL';
-
+export type PaymentMethod = | 'BARIDIMOB' | 'RIB' | 'CCP' | 'PAYPAL';
 // ✅ NOUVEAU : Raisons d'annulation
 export type CancellationReason = 
   | 'CHANGE_OF_PLANS'
