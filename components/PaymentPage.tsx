@@ -1,15 +1,17 @@
+// components/PaymentPage.tsx
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 import { Booking } from '../types';
 import { paymentService } from '../services/paymentService';
+import { platformService, PlatformSettings } from '../services/platformService';
 import { formatCurrency } from '../services/stripeService';
 
 export const PaymentPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ Extraire le bookingId depuis l'URL
   const bookingId = location.pathname.split('/payment/')[1];
 
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -20,9 +22,19 @@ export const PaymentPage: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ Coordonnées de la plateforme
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
   useEffect(() => {
     loadBooking();
+    loadPlatformSettings();
   }, [bookingId]);
+
+  const loadPlatformSettings = async () => {
+    const settings = await platformService.getPlatformSettings();
+    setPlatformSettings(settings);
+  };
 
   const loadBooking = async () => {
     if (!bookingId) {
@@ -47,7 +59,6 @@ export const PaymentPage: React.FC = () => {
 
       setBooking(data as Booking);
 
-      // Charger le titre de la propriété
       if (data.property_id) {
         const { data: property } = await supabase
           .from('properties')
@@ -116,6 +127,160 @@ export const PaymentPage: React.FC = () => {
     }
   };
 
+  // ✅ Fonction pour copier dans le presse-papier
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  // ✅ Affiche les coordonnées selon la méthode de paiement
+  const renderPaymentDetails = () => {
+    if (!platformSettings || !booking) return null;
+
+    const method = booking.payment_method;
+
+    // BaridiMob
+    if (method === 'BARIDIMOB' && platformSettings.baridimob_number) {
+      return (
+        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-5 mb-6">
+          <h4 className="text-yellow-300 font-bold mb-3 flex items-center gap-2">
+            📱 Payer par BaridiMob
+          </h4>
+          
+          <div className="space-y-3">
+            <div>
+              <p className="text-yellow-200/60 text-xs mb-1">Numéro</p>
+              <div className="flex items-center justify-between bg-yellow-500/10 rounded-xl p-3">
+                <p className="text-yellow-100 font-bold text-lg">
+                  {platformSettings.baridimob_number}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(platformSettings.baridimob_number!, 'baridimob')}
+                  className="px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-lg text-yellow-100 text-xs font-bold transition-colors"
+                >
+                  {copiedField === 'baridimob' ? '✓ Copié' : '📋 Copier'}
+                </button>
+              </div>
+            </div>
+
+            {platformSettings.baridimob_name && (
+              <div>
+                <p className="text-yellow-200/60 text-xs mb-1">Nom du compte</p>
+                <p className="text-yellow-100 font-medium">{platformSettings.baridimob_name}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // RIB
+    if (method === 'RIB' && platformSettings.rib_account_number) {
+      return (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-5 mb-6">
+          <h4 className="text-green-300 font-bold mb-3 flex items-center gap-2">
+            🏦 Virement bancaire (RIB)
+          </h4>
+          
+          <div className="space-y-3">
+            <div>
+              <p className="text-green-200/60 text-xs mb-1">RIB</p>
+              <div className="flex items-center justify-between bg-green-500/10 rounded-xl p-3">
+                <p className="text-green-100 font-mono text-sm break-all">
+                  {platformSettings.rib_account_number}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(platformSettings.rib_account_number!, 'rib')}
+                  className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-100 text-xs font-bold transition-colors ml-2 shrink-0"
+                >
+                  {copiedField === 'rib' ? '✓' : '📋'}
+                </button>
+              </div>
+            </div>
+
+            {platformSettings.rib_account_name && (
+              <div>
+                <p className="text-green-200/60 text-xs mb-1">Nom du compte</p>
+                <p className="text-green-100 font-medium">{platformSettings.rib_account_name}</p>
+              </div>
+            )}
+
+            {platformSettings.rib_bank_name && (
+              <div>
+                <p className="text-green-200/60 text-xs mb-1">Banque</p>
+                <p className="text-green-100 font-medium">{platformSettings.rib_bank_name}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // CCP
+    if (method === 'CCP' && platformSettings.ccp_account_number) {
+      return (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5 mb-6">
+          <h4 className="text-orange-300 font-bold mb-3 flex items-center gap-2">
+            📮 Payer par CCP
+          </h4>
+          
+          <div className="space-y-3">
+            <div>
+              <p className="text-orange-200/60 text-xs mb-1">Numéro CCP</p>
+              <div className="flex items-center justify-between bg-orange-500/10 rounded-xl p-3">
+                <p className="text-orange-100 font-bold text-lg">
+                  {platformSettings.ccp_account_number}
+                </p>
+                <button
+                  onClick={() => copyToClipboard(platformSettings.ccp_account_number!, 'ccp')}
+                  className="px-3 py-1 bg-orange-500/20 hover:bg-orange-500/30 rounded-lg text-orange-100 text-xs font-bold transition-colors"
+                >
+                  {copiedField === 'ccp' ? '✓ Copié' : '📋 Copier'}
+                </button>
+              </div>
+            </div>
+
+            {platformSettings.ccp_account_name && (
+              <div>
+                <p className="text-orange-200/60 text-xs mb-1">Nom du compte</p>
+                <p className="text-orange-100 font-medium">{platformSettings.ccp_account_name}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // PayPal
+    if (method === 'PAYPAL' && platformSettings.paypal_email) {
+      return (
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-2xl p-5 mb-6">
+          <h4 className="text-blue-300 font-bold mb-3 flex items-center gap-2">
+            💳 Payer par PayPal
+          </h4>
+          
+          <div>
+            <p className="text-blue-200/60 text-xs mb-1">Email PayPal</p>
+            <div className="flex items-center justify-between bg-blue-500/10 rounded-xl p-3">
+              <p className="text-blue-100 font-medium">
+                {platformSettings.paypal_email}
+              </p>
+              <button
+                onClick={() => copyToClipboard(platformSettings.paypal_email!, 'paypal')}
+                className="px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-100 text-xs font-bold transition-colors"
+              >
+                {copiedField === 'paypal' ? '✓ Copié' : '📋 Copier'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   // Loading
   if (loading) {
     return (
@@ -123,7 +288,6 @@ export const PaymentPage: React.FC = () => {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/60">Chargement...</p>
-          <p className="text-white/30 text-xs mt-2">ID: {bookingId}</p>
         </div>
       </div>
     );
@@ -137,7 +301,6 @@ export const PaymentPage: React.FC = () => {
           <span className="text-5xl mb-4 block">❌</span>
           <h1 className="text-2xl font-black text-white mb-2">Erreur</h1>
           <p className="text-white/60 mb-4">{error}</p>
-          <p className="text-white/30 text-xs mb-6">ID: {bookingId || 'non défini'}</p>
           <button
             onClick={() => navigate('/')}
             className="px-6 py-3 bg-purple-600 text-white rounded-2xl font-bold"
@@ -178,6 +341,8 @@ export const PaymentPage: React.FC = () => {
         return { icon: '📱', name: 'BaridiMob', color: 'text-yellow-400' };
       case 'RIB':
         return { icon: '🏦', name: 'Virement bancaire (RIB)', color: 'text-green-400' };
+      case 'CCP':
+        return { icon: '📮', name: 'CCP', color: 'text-orange-400' };
       default:
         return { icon: '💰', name: 'Paiement', color: 'text-white' };
     }
@@ -206,6 +371,13 @@ export const PaymentPage: React.FC = () => {
         <p className="text-white/60 mb-8">
           Finalisez votre réservation
         </p>
+
+        {/* ✅ ALERTE : Paiement à la plateforme */}
+        <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-2xl p-4 mb-6">
+          <p className="text-indigo-200 text-sm">
+            ℹ️ Le paiement se fait à la plateforme <strong>LocaDZ</strong>. L'hôte recevra son paiement après validation.
+          </p>
+        </div>
 
         {/* Booking Info */}
         <div className="bg-gradient-to-br from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-3xl p-6 mb-6">
@@ -244,34 +416,46 @@ export const PaymentPage: React.FC = () => {
           </div>
         </div>
 
+        {/* ✅ Coordonnées bancaires selon la méthode */}
+        {renderPaymentDetails()}
+
         {/* Payment Instructions */}
         <div className="bg-white/5 border border-white/10 rounded-3xl p-6 mb-6">
           <h3 className="font-bold text-white mb-4">📋 Instructions</h3>
           
           {booking.payment_method === 'BARIDIMOB' && (
             <div className="space-y-3 text-sm text-white/70">
-              <p>1. Ouvrez votre application BaridiMob</p>
-              <p>2. Effectuez un virement du montant indiqué</p>
-              <p>3. Prenez une capture d'écran de la confirmation</p>
-              <p>4. Envoyez la preuve ci-dessous</p>
+              <p>1️⃣ Ouvrez votre application BaridiMob</p>
+              <p>2️⃣ Effectuez un virement vers le numéro ci-dessus</p>
+              <p>3️⃣ Prenez une capture d'écran de la confirmation</p>
+              <p>4️⃣ Envoyez la preuve ci-dessous</p>
             </div>
           )}
 
           {booking.payment_method === 'RIB' && (
             <div className="space-y-3 text-sm text-white/70">
-              <p>1. Effectuez un virement bancaire du montant indiqué</p>
-              <p>2. Gardez le reçu ou la confirmation</p>
-              <p>3. Prenez une photo ou capture d'écran</p>
-              <p>4. Envoyez la preuve ci-dessous</p>
+              <p>1️⃣ Effectuez un virement vers le RIB ci-dessus</p>
+              <p>2️⃣ Gardez le reçu ou la confirmation</p>
+              <p>3️⃣ Prenez une photo ou capture d'écran</p>
+              <p>4️⃣ Envoyez la preuve ci-dessous</p>
+            </div>
+          )}
+
+          {booking.payment_method === 'CCP' && (
+            <div className="space-y-3 text-sm text-white/70">
+              <p>1️⃣ Rendez-vous dans un bureau de poste</p>
+              <p>2️⃣ Effectuez un versement vers le CCP ci-dessus</p>
+              <p>3️⃣ Gardez le reçu</p>
+              <p>4️⃣ Envoyez la preuve ci-dessous</p>
             </div>
           )}
 
           {booking.payment_method === 'PAYPAL' && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
-              <p className="text-yellow-300 text-sm">
-                ⚠️ Le paiement PayPal direct sera bientôt disponible. 
-                Pour l'instant, vous pouvez effectuer un paiement PayPal et envoyer la preuve.
-              </p>
+            <div className="space-y-3 text-sm text-white/70">
+              <p>1️⃣ Connectez-vous à PayPal</p>
+              <p>2️⃣ Envoyez le montant à l'email ci-dessus</p>
+              <p>3️⃣ Prenez une capture d'écran de la confirmation</p>
+              <p>4️⃣ Envoyez la preuve ci-dessous</p>
             </div>
           )}
         </div>
